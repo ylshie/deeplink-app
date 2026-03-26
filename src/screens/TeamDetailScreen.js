@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -14,11 +13,12 @@ import {
   MessageCircle,
   Play,
 } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import { getTeamChat } from '../api';
 import { getIcon } from '../components/IconMap';
 
 export default function TeamDetailScreen({ navigation, route }) {
+  const { colors } = useTheme();
   const { id, name, agentCount, icon, iconBg } = route?.params || {};
   const [agents, setAgents] = useState([]);
   const [messageCount, setMessageCount] = useState(0);
@@ -41,15 +41,15 @@ export default function TeamDetailScreen({ navigation, route }) {
   const TeamIcon = getIcon(icon);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+
 
       {/* Nav */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle}>团队详情</Text>
+        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>团队详情</Text>
         <TouchableOpacity>
           <Settings size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -69,14 +69,14 @@ export default function TeamDetailScreen({ navigation, route }) {
             <View style={[styles.teamAvatar, { backgroundColor: iconBg || colors.primary }]}>
               <TeamIcon size={32} color="#FFFFFF" />
             </View>
-            <Text style={styles.teamName}>{name}</Text>
-            <Text style={styles.teamMeta}>
+            <Text style={[styles.teamName, { color: colors.textPrimary }]}>{name}</Text>
+            <Text style={[styles.teamMeta, { color: colors.textSecondary }]}>
               {agents.length} 位 Agent · {messageCount} 条消息
             </Text>
 
             {/* Enter Chat Button */}
             <TouchableOpacity
-              style={styles.enterChatBtn}
+              style={[styles.enterChatBtn, { backgroundColor: colors.primary }]}
               onPress={() =>
                 navigation.navigate('TeamChat', {
                   id,
@@ -92,14 +92,14 @@ export default function TeamDetailScreen({ navigation, route }) {
 
           {/* Agent Members */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>成员 Agent</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>成员 Agent</Text>
           </View>
 
           <View style={styles.agentList}>
             {agents.map((agent) => {
               const AgentIcon = getIcon(agent.icon);
               return (
-                <View key={agent.id} style={styles.agentCard}>
+                <View key={agent.id} style={[styles.agentCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
                   <View
                     style={[
                       styles.agentAvatar,
@@ -109,13 +109,13 @@ export default function TeamDetailScreen({ navigation, route }) {
                     <AgentIcon size={18} color="#FFFFFF" />
                   </View>
                   <View style={styles.agentInfo}>
-                    <Text style={styles.agentName}>{agent.name}</Text>
-                    <Text style={styles.agentRole} numberOfLines={1}>
+                    <Text style={[styles.agentName, { color: colors.textPrimary }]}>{agent.name}</Text>
+                    <Text style={[styles.agentRole, { color: colors.textSecondary }]} numberOfLines={1}>
                       {getRoleDescription(agent.id)}
                     </Text>
                   </View>
-                  <View style={styles.aiBadge}>
-                    <Text style={styles.aiBadgeText}>AI</Text>
+                  <View style={[styles.aiBadge, { backgroundColor: colors.primary + '18' }]}>
+                    <Text style={[styles.aiBadgeText, { color: colors.primary }]}>AI</Text>
                   </View>
                 </View>
               );
@@ -124,12 +124,12 @@ export default function TeamDetailScreen({ navigation, route }) {
 
           {/* Quick Actions */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>快捷操作</Text>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>快捷操作</Text>
           </View>
 
           <View style={styles.quickActions}>
             <TouchableOpacity
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
               onPress={() =>
                 navigation.navigate('TeamChat', {
                   id,
@@ -139,8 +139,8 @@ export default function TeamDetailScreen({ navigation, route }) {
               }
             >
               <Play size={20} color={colors.primary} />
-              <Text style={styles.actionTitle}>发起分析</Text>
-              <Text style={styles.actionDesc}>向所有 Agent 提问并获得共识</Text>
+              <Text style={[styles.actionTitle, { color: colors.textPrimary }]}>发起分析</Text>
+              <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>向所有 Agent 提问并获得共识</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -172,7 +172,7 @@ function getRoleDescription(agentId) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
   navBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 44,
   },
-  navTitle: { fontSize: 17, fontWeight: '600', color: colors.textPrimary },
+  navTitle: { fontSize: 17, fontWeight: '600' },
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingBottom: 40 },
 
@@ -198,12 +198,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  teamName: { fontSize: 22, fontWeight: '700', color: colors.textPrimary },
-  teamMeta: { fontSize: 14, color: colors.textSecondary, marginTop: -4 },
+  teamName: { fontSize: 22, fontWeight: '700' },
+  teamMeta: { fontSize: 14, marginTop: -4 },
   enterChatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -214,18 +213,16 @@ const styles = StyleSheet.create({
 
   // ── Section ──
   sectionHeader: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
+  sectionTitle: { fontSize: 15, fontWeight: '600' },
 
   // ── Agent List ──
   agentList: { paddingHorizontal: 20, gap: 10 },
   agentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     gap: 12,
   },
   agentAvatar: {
@@ -236,26 +233,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   agentInfo: { flex: 1, gap: 2 },
-  agentName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  agentRole: { fontSize: 12, color: colors.textSecondary },
+  agentName: { fontSize: 15, fontWeight: '600' },
+  agentRole: { fontSize: 12 },
   aiBadge: {
-    backgroundColor: colors.primary + '18',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
-  aiBadgeText: { fontSize: 11, fontWeight: '600', color: colors.primary },
+  aiBadgeText: { fontSize: 11, fontWeight: '600' },
 
   // ── Quick Actions ──
   quickActions: { paddingHorizontal: 20, gap: 10 },
   actionCard: {
-    backgroundColor: colors.card,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     gap: 6,
   },
-  actionTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginTop: 4 },
-  actionDesc: { fontSize: 13, color: colors.textSecondary },
+  actionTitle: { fontSize: 15, fontWeight: '600', marginTop: 4 },
+  actionDesc: { fontSize: 13 },
 });

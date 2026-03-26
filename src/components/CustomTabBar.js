@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MessageCircle, CalendarClock, CircleUserRound } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 
 const tabConfig = [
   { key: 'Conversations', label: '对话', icon: MessageCircle },
@@ -10,9 +10,11 @@ const tabConfig = [
 ];
 
 export default function CustomTabBar({ state, navigation }) {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.pill}>
+    <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
+      <View style={[styles.pill, { backgroundColor: colors.tabPillBg, borderColor: colors.tabPillBorder }]}>
         {tabConfig.map((tab, index) => {
           const isFocused = state.index === index;
           const IconComponent = tab.icon;
@@ -20,12 +22,8 @@ export default function CustomTabBar({ state, navigation }) {
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[styles.tab, isFocused && styles.tabActive]}
-              onPress={() => {
-                if (!isFocused) {
-                  navigation.navigate(tab.key);
-                }
-              }}
+              style={[styles.tab, isFocused && { backgroundColor: colors.tabActive }]}
+              onPress={() => { if (!isFocused) navigation.navigate(tab.key); }}
               activeOpacity={0.7}
             >
               <IconComponent
@@ -35,10 +33,7 @@ export default function CustomTabBar({ state, navigation }) {
               <Text
                 style={[
                   styles.label,
-                  {
-                    color: isFocused ? '#FFFFFF' : colors.tabInactive,
-                    fontWeight: isFocused ? '600' : '500',
-                  },
+                  { color: isFocused ? '#FFFFFF' : colors.tabInactive, fontWeight: isFocused ? '600' : '500' },
                 ]}
               >
                 {tab.label}
@@ -52,38 +47,11 @@ export default function CustomTabBar({ state, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 24,
-    backgroundColor: colors.background,
-  },
+  wrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 },
   pill: {
-    flexDirection: 'row',
-    height: 62,
-    backgroundColor: colors.tabPillBg,
-    borderRadius: 32,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: colors.tabPillBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 4,
+    flexDirection: 'row', height: 62, borderRadius: 32, padding: 4, borderWidth: 1,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 4,
   },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 26,
-    gap: 4,
-  },
-  tabActive: {
-    backgroundColor: colors.tabActive,
-  },
-  label: {
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
+  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 26, gap: 4 },
+  label: { fontSize: 10, letterSpacing: 0.5 },
 });

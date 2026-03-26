@@ -1,18 +1,28 @@
 import React from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import AppNavigator from './src/navigation/AppNavigator';
-import { colors } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
+
+function AppInner() {
+  const { colors, isDark } = useTheme();
+  return (
+    <NavigationContainer>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+        <AppNavigator />
+      </SafeAreaView>
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
   return (
     <SafeAreaProvider>
-      <NavigationContainer>
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
-          <AppNavigator />
-        </SafeAreaView>
-      </NavigationContainer>
+      <ThemeProvider>
+        <AppInner />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

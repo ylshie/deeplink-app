@@ -1,4 +1,5 @@
-export { colors } from './colors';
+export { lightColors, darkColors, colors } from './colors';
+export { ThemeProvider, useTheme } from './ThemeContext';
 
 export const fonts = {
   regular: { fontWeight: '400' },

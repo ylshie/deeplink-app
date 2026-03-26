@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -16,12 +15,13 @@ import {
   Pencil,
   Check,
 } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import { getTasks } from '../api';
 
 const filters = ['全部', '运行中', '已暂停', '草稿'];
 
 export default function TasksScreen({ navigation }) {
+  const { colors } = useTheme();
   const [activeFilter, setActiveFilter] = useState('全部');
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,11 +43,11 @@ export default function TasksScreen({ navigation }) {
   }, [activeFilter, fetchData]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>任务</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>任务</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity>
             <Search size={22} color={colors.textPrimary} />
@@ -63,13 +63,14 @@ export default function TasksScreen({ navigation }) {
         {filters.map((f) => (
           <TouchableOpacity
             key={f}
-            style={[styles.chip, activeFilter === f && styles.chipActive]}
+            style={[styles.chip, { backgroundColor: colors.chipBg, borderColor: colors.chipBorder }, activeFilter === f && { backgroundColor: colors.primary, borderColor: colors.primary }]}
             onPress={() => setActiveFilter(f)}
           >
             <Text
               style={[
                 styles.chipText,
-                activeFilter === f && styles.chipTextActive,
+                { color: colors.textPrimary },
+                activeFilter === f && { color: '#FFFFFF' },
               ]}
             >
               {f}
@@ -92,7 +93,7 @@ export default function TasksScreen({ navigation }) {
           {tasks.map((task) => (
             <TouchableOpacity
               key={task.id}
-              style={styles.card}
+              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
               activeOpacity={0.7}
               onPress={() =>
                 navigation.navigate('TaskDetail', {
@@ -110,22 +111,22 @@ export default function TasksScreen({ navigation }) {
                       { backgroundColor: task.statusColor },
                     ]}
                   />
-                  <Text style={styles.cardName} numberOfLines={1}>
+                  <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>
                     {task.name}
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
-                  <TouchableOpacity style={styles.runBtn}>
+                  <TouchableOpacity style={[styles.runBtn, { backgroundColor: colors.primary }]}>
                     <Play size={12} color="#FFFFFF" fill="#FFFFFF" />
                     <Text style={styles.runBtnText}>运行</Text>
                   </TouchableOpacity>
                   {task.status === 'active' && (
-                    <TouchableOpacity style={styles.actionBtn}>
+                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.divider }]}>
                       <Pause size={14} color={colors.textSecondary} />
                     </TouchableOpacity>
                   )}
                   {task.status === 'draft' && (
-                    <TouchableOpacity style={styles.actionBtn}>
+                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.divider }]}>
                       <Pencil size={14} color={colors.textSecondary} />
                     </TouchableOpacity>
                   )}
@@ -134,13 +135,13 @@ export default function TasksScreen({ navigation }) {
 
               {/* Card Info */}
               <View style={styles.cardInfo}>
-                <Text style={styles.infoText}>
+                <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                   {task.group} · {task.schedule}
                 </Text>
                 {!task.neverRun && (
                   <>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>
+                      <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                         Last: {task.lastTime} →{' '}
                       </Text>
                       <Text
@@ -160,7 +161,7 @@ export default function TasksScreen({ navigation }) {
                       )}
                     </View>
                     {task.nextRun && (
-                      <Text style={styles.infoText}>Next: {task.nextRun}</Text>
+                      <Text style={[styles.infoText, { color: colors.textSecondary }]}>Next: {task.nextRun}</Text>
                     )}
                     {task.pausedSince && (
                       <Text style={[styles.infoText, { color: '#FF9500' }]}>
@@ -170,7 +171,7 @@ export default function TasksScreen({ navigation }) {
                   </>
                 )}
                 {task.neverRun && (
-                  <Text style={[styles.infoText, { fontStyle: 'italic' }]}>
+                  <Text style={[styles.infoText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
                     Never run
                   </Text>
                 )}
@@ -186,7 +187,6 @@ export default function TasksScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -198,7 +198,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   headerRight: {
     flexDirection: 'row',
@@ -223,21 +222,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.chipBg,
     borderWidth: 1,
-    borderColor: colors.chipBorder,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
   },
   loadingWrap: {
     flex: 1,
@@ -253,11 +242,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
-    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     gap: 14,
   },
   cardHeader: {
@@ -279,7 +266,6 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
     flex: 1,
   },
   cardActions: {
@@ -290,7 +276,6 @@ const styles = StyleSheet.create({
   runBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -302,7 +287,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   actionBtn: {
-    backgroundColor: colors.divider,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -312,7 +296,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: colors.textSecondary,
   },
   infoRow: {
     flexDirection: 'row',

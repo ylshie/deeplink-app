@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -18,7 +17,7 @@ import {
   TrendingUp,
   RotateCcw,
 } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import { getTaskRuns } from '../api';
 
 const tabs = ['运行', '交易', '配置', '统计'];
@@ -29,6 +28,7 @@ const tradeIconMap = {
 };
 
 export default function TaskDetailScreen({ navigation, route }) {
+  const { colors } = useTheme();
   const { id, name } = route?.params || {};
   const displayName = name || 'BTC 15min Debate';
   const [activeTab, setActiveTab] = useState('运行');
@@ -50,14 +50,14 @@ export default function TaskDetailScreen({ navigation, route }) {
   }, [id]);
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+
       {/* Nav Bar */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle} numberOfLines={1}>
+        <Text style={[styles.navTitle, { color: colors.textPrimary }]} numberOfLines={1}>
           {displayName}
         </Text>
         <View style={styles.navRight}>
@@ -73,42 +73,43 @@ export default function TaskDetailScreen({ navigation, route }) {
       {/* Status Row */}
       <View style={styles.statusRow}>
         <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
-        <Text style={styles.statusText}>
+        <Text style={[styles.statusText, { color: colors.textSecondary }]}>
           Active · Every 15m · Next: 14:30
         </Text>
       </View>
 
       {/* Action Buttons */}
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.runNowBtn}>
+        <TouchableOpacity style={[styles.runNowBtn, { backgroundColor: colors.primary }]}>
           <Play size={14} color="#FFFFFF" fill="#FFFFFF" />
           <Text style={styles.runNowText}>立即运行</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.outlineBtn}>
+        <TouchableOpacity style={[styles.outlineBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <Pause size={14} color={colors.textPrimary} />
-          <Text style={styles.outlineBtnText}>暂停</Text>
+          <Text style={[styles.outlineBtnText, { color: colors.textPrimary }]}>暂停</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.outlineBtn}>
+        <TouchableOpacity style={[styles.outlineBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <FlaskConical size={14} color={colors.textPrimary} />
-          <Text style={styles.outlineBtnText}>测试</Text>
+          <Text style={[styles.outlineBtnText, { color: colors.textPrimary }]}>测试</Text>
         </TouchableOpacity>
       </View>
 
       {/* Tab Row */}
-      <View style={styles.tabRow}>
+      <View style={[styles.tabRow, { borderBottomColor: colors.divider }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[
               styles.tabItem,
-              activeTab === tab && styles.tabItemActive,
+              activeTab === tab && [styles.tabItemActive, { borderBottomColor: colors.primary }],
             ]}
             onPress={() => setActiveTab(tab)}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === tab && styles.tabTextActive,
+                { color: colors.textSecondary },
+                activeTab === tab && { color: colors.primary, fontWeight: '600' },
               ]}
             >
               {tab}
@@ -128,16 +129,16 @@ export default function TaskDetailScreen({ navigation, route }) {
           contentContainerStyle={styles.runList}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.dayHeader}>Today</Text>
+          <Text style={[styles.dayHeader, { color: colors.textSecondary }]}>Today</Text>
           {runs.map((run) => {
             const TradeIcon = run.tradeIcon
               ? tradeIconMap[run.tradeIcon]
               : null;
             return (
-              <View key={run.id} style={styles.runCard}>
+              <View key={run.id} style={[styles.runCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
                 <View style={styles.runTop}>
                   <View style={styles.runLeft}>
-                    <Text style={styles.runTime}>{run.time}</Text>
+                    <Text style={[styles.runTime, { color: colors.textPrimary }]}>{run.time}</Text>
                     <View
                       style={[
                         styles.runBadge,
@@ -157,9 +158,9 @@ export default function TaskDetailScreen({ navigation, route }) {
                       </Text>
                     </View>
                   </View>
-                  <Text style={styles.runDuration}>{run.duration}</Text>
+                  <Text style={[styles.runDuration, { color: colors.textMuted }]}>{run.duration}</Text>
                 </View>
-                <Text style={styles.runDesc}>{run.desc}</Text>
+                <Text style={[styles.runDesc, { color: colors.textSecondary }]}>{run.desc}</Text>
                 {run.trade && (
                   <View style={styles.runTradeRow}>
                     {TradeIcon && (
@@ -181,7 +182,7 @@ export default function TaskDetailScreen({ navigation, route }) {
               </View>
             );
           })}
-          <Text style={styles.dayHeader}>Yesterday (12 runs) ▾</Text>
+          <Text style={[styles.dayHeader, { color: colors.textSecondary }]}>Yesterday (12 runs) ▾</Text>
         </ScrollView>
       )}
     </View>
@@ -191,7 +192,6 @@ export default function TaskDetailScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   navBar: {
     flexDirection: 'row',
@@ -203,7 +203,6 @@ const styles = StyleSheet.create({
   navTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.textPrimary,
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 16,
@@ -226,7 +225,6 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 13,
-    color: colors.textSecondary,
   },
   actionRow: {
     flexDirection: 'row',
@@ -238,7 +236,6 @@ const styles = StyleSheet.create({
   runNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
@@ -252,24 +249,20 @@ const styles = StyleSheet.create({
   outlineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     gap: 6,
   },
   outlineBtnText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
   },
   tabRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
     height: 44,
   },
   tabItem: {
@@ -279,16 +272,10 @@ const styles = StyleSheet.create({
   },
   tabItemActive: {
     borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  tabTextActive: {
-    color: colors.primary,
-    fontWeight: '600',
   },
   loadingWrap: {
     flex: 1,
@@ -306,15 +293,12 @@ const styles = StyleSheet.create({
   dayHeader: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.textSecondary,
     marginBottom: 4,
   },
   runCard: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     gap: 10,
   },
   runTop: {
@@ -330,7 +314,6 @@ const styles = StyleSheet.create({
   runTime: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textPrimary,
   },
   runBadge: {
     paddingHorizontal: 8,
@@ -343,11 +326,9 @@ const styles = StyleSheet.create({
   },
   runDuration: {
     fontSize: 12,
-    color: colors.textMuted,
   },
   runDesc: {
     fontSize: 13,
-    color: colors.textSecondary,
     lineHeight: 18,
   },
   runTradeRow: {

@@ -5,17 +5,17 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import { Search, SquarePen } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import { getAgents, getTeams } from '../api';
 import { getIcon } from '../components/IconMap';
 
 const filters = ['Agent', 'Teams'];
 
 export default function ConversationsScreen({ navigation }) {
+  const { colors } = useTheme();
   const [activeFilter, setActiveFilter] = useState('Agent');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export default function ConversationsScreen({ navigation }) {
         <View style={styles.rowContent}>
           <View style={styles.rowTop}>
             <View style={styles.rowTitleWrap}>
-              <Text style={styles.rowName} numberOfLines={1}>
+              <Text style={[styles.rowName, { color: colors.textPrimary }]} numberOfLines={1}>
                 {item.name}
               </Text>
               {item.tag && (
@@ -80,21 +80,21 @@ export default function ConversationsScreen({ navigation }) {
               )}
             </View>
             {item.time ? (
-              <Text style={styles.time}>{item.time}</Text>
+              <Text style={[styles.time, { color: colors.textSecondary }]}>{item.time}</Text>
             ) : null}
           </View>
           <View style={styles.rowBottom}>
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
               {item.subtitle}
             </Text>
             {item.badge > 0 && (
-              <View style={styles.badge}>
+              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
                 <Text style={styles.badgeText}>{item.badge}</Text>
               </View>
             )}
           </View>
           {activeFilter === 'Teams' && item.agentCount > 0 && (
-            <Text style={styles.agentCountText}>
+            <Text style={[styles.agentCountText, { color: colors.primary }]}>
               {item.agentCount} Agents
             </Text>
           )}
@@ -103,14 +103,14 @@ export default function ConversationsScreen({ navigation }) {
     );
   };
 
-  const renderSeparator = () => <View style={styles.separator} />;
+  const renderSeparator = () => <View style={[styles.separator, { backgroundColor: colors.divider }]} />;
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>对话</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>对话</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity>
             <Search size={22} color={colors.textPrimary} />
@@ -126,13 +126,14 @@ export default function ConversationsScreen({ navigation }) {
         {filters.map((f) => (
           <TouchableOpacity
             key={f}
-            style={[styles.chip, activeFilter === f && styles.chipActive]}
+            style={[styles.chip, { backgroundColor: colors.chipBg, borderColor: colors.chipBorder }, activeFilter === f && { backgroundColor: colors.primary, borderColor: colors.primary }]}
             onPress={() => handleFilterPress(f)}
           >
             <Text
               style={[
                 styles.chipText,
-                activeFilter === f && styles.chipTextActive,
+                { color: colors.textPrimary },
+                activeFilter === f && { color: '#FFFFFF' },
               ]}
             >
               {f}
@@ -163,7 +164,6 @@ export default function ConversationsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.textPrimary,
   },
   headerRight: {
     flexDirection: 'row',
@@ -192,21 +191,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.chipBg,
     borderWidth: 1,
-    borderColor: colors.chipBorder,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textPrimary,
-  },
-  chipTextActive: {
-    color: '#FFFFFF',
   },
   loadingWrap: {
     flex: 1,
@@ -248,7 +237,6 @@ const styles = StyleSheet.create({
   rowName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
     flexShrink: 1,
   },
   tag: {
@@ -262,7 +250,6 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginLeft: 8,
   },
   rowBottom: {
@@ -272,11 +259,9 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: colors.textSecondary,
     flex: 1,
   },
   badge: {
-    backgroundColor: colors.primary,
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -291,12 +276,10 @@ const styles = StyleSheet.create({
   },
   agentCountText: {
     fontSize: 12,
-    color: colors.primary,
     marginTop: 2,
   },
   separator: {
     height: 1,
-    backgroundColor: colors.divider,
     marginLeft: 82,
     marginRight: 20,
   },

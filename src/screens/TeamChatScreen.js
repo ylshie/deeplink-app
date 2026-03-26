@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  StatusBar,
   ActivityIndicator,
 } from 'react-native';
 import {
@@ -16,11 +15,12 @@ import {
   Mic,
   Plus,
 } from 'lucide-react-native';
-import { colors } from '../theme';
+import { useTheme } from '../theme';
 import { getTeamChat, sendTeamMessage } from '../api';
 import { getIcon } from '../components/IconMap';
 
 export default function TeamChatScreen({ navigation, route }) {
+  const { colors } = useTheme();
   const { id, name, agentCount } = route?.params || {};
   const displayName = name || '分析群';
   const [inputText, setInputText] = useState('');
@@ -94,7 +94,7 @@ export default function TeamChatScreen({ navigation, route }) {
       case 'time':
         return (
           <View key={msg.id} style={styles.timeDivider}>
-            <Text style={styles.timeText}>{msg.text}</Text>
+            <Text style={[styles.timeText, { color: colors.textMuted, backgroundColor: colors.divider }]}>{msg.text}</Text>
           </View>
         );
 
@@ -110,13 +110,13 @@ export default function TeamChatScreen({ navigation, route }) {
             </View>
             <View style={styles.agentContent}>
               <View style={styles.agentNameRow}>
-                <Text style={styles.agentName}>{agent.name}</Text>
-                <View style={styles.aiBadge}>
-                  <Text style={styles.aiBadgeText}>AI</Text>
+                <Text style={[styles.agentName, { color: colors.textPrimary }]}>{agent.name}</Text>
+                <View style={[styles.aiBadge, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[styles.aiBadgeText, { color: colors.primary }]}>AI</Text>
                 </View>
               </View>
-              <View style={styles.agentBubble}>
-                <Text style={styles.agentText}>{msg.text}</Text>
+              <View style={[styles.agentBubble, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                <Text style={[styles.agentText, { color: colors.textPrimary }]}>{msg.text}</Text>
               </View>
             </View>
           </View>
@@ -126,7 +126,7 @@ export default function TeamChatScreen({ navigation, route }) {
       case 'user':
         return (
           <View key={msg.id} style={styles.userRow}>
-            <View style={styles.userBubble}>
+            <View style={[styles.userBubble, { backgroundColor: colors.primary }]}>
               <Text style={styles.userText}>{msg.text}</Text>
             </View>
           </View>
@@ -134,19 +134,19 @@ export default function TeamChatScreen({ navigation, route }) {
 
       case 'debate':
         return (
-          <View key={msg.id} style={styles.debateCard}>
+          <View key={msg.id} style={[styles.debateCard, { backgroundColor: colors.card }]}>
             {/* Header: action badge + pair name */}
             <View style={styles.debateHeader}>
               <View style={styles.actionBadge}>
                 <Text style={styles.actionBadgeText}>{msg.action}</Text>
               </View>
-              <Text style={styles.debateTitle}>{msg.title}</Text>
+              <Text style={[styles.debateTitle, { color: colors.textPrimary }]}>{msg.title}</Text>
             </View>
 
             {/* Confidence bar */}
             <View style={styles.confidenceRow}>
-              <Text style={styles.confLabel}>Confidence:</Text>
-              <View style={styles.confBarBg}>
+              <Text style={[styles.confLabel, { color: colors.textSecondary }]}>Confidence:</Text>
+              <View style={[styles.confBarBg, { backgroundColor: colors.divider }]}>
                 <View
                   style={[
                     styles.confBarFill,
@@ -170,14 +170,14 @@ export default function TeamChatScreen({ navigation, route }) {
             <View style={styles.tradeBox}>
               <Text style={styles.tradeLine}>{msg.trade}</Text>
               {msg.tradePrice && (
-                <Text style={styles.tradePrice}>{msg.tradePrice}</Text>
+                <Text style={[styles.tradePrice, { color: colors.textSecondary }]}>{msg.tradePrice}</Text>
               )}
             </View>
 
             {/* Expand report */}
             {msg.hasReport && (
               <TouchableOpacity style={styles.reportBtn}>
-                <Text style={styles.reportBtnText}>展开完整报告 ▾</Text>
+                <Text style={[styles.reportBtnText, { color: colors.primary }]}>展开完整报告 ▾</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -189,8 +189,8 @@ export default function TeamChatScreen({ navigation, route }) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+
       {/* Nav Bar */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -209,10 +209,10 @@ export default function TeamChatScreen({ navigation, route }) {
           }
           activeOpacity={0.6}
         >
-          <Text style={styles.navTitle} numberOfLines={1}>
+          <Text style={[styles.navTitle, { color: colors.textPrimary }]} numberOfLines={1}>
             {displayName}
           </Text>
-          <Text style={styles.navSubtitle}>
+          <Text style={[styles.navSubtitle, { color: colors.textSecondary }]}>
             {agentCount || agents.length} Agents ›
           </Text>
         </TouchableOpacity>
@@ -240,20 +240,20 @@ export default function TeamChatScreen({ navigation, route }) {
           {sending && (
             <View style={styles.thinkingRow}>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.thinkingText}>分析师讨论中...</Text>
+              <Text style={[styles.thinkingText, { color: colors.textSecondary }]}>分析师讨论中...</Text>
             </View>
           )}
         </ScrollView>
       )}
 
       {/* Input Bar */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { backgroundColor: colors.card, borderTopColor: colors.cardBorder }]}>
         <TouchableOpacity>
           <Smile size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <View style={styles.inputField}>
+        <View style={[styles.inputField, { backgroundColor: colors.inputBg }]}>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, { color: colors.textPrimary }]}
             placeholder="发消息或按住说话..."
             placeholderTextColor={colors.textMuted}
             value={inputText}
@@ -265,7 +265,7 @@ export default function TeamChatScreen({ navigation, route }) {
         <TouchableOpacity>
           <Mic size={24} color={colors.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.plusBtn} onPress={handleSend}>
+        <TouchableOpacity style={[styles.plusBtn, { backgroundColor: colors.primary }]} onPress={handleSend}>
           <Plus size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -274,7 +274,7 @@ export default function TeamChatScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1 },
 
   // ── Nav ──
   navBar: {
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     height: 44,
   },
   navCenter: { alignItems: 'center', gap: 2 },
-  navTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary },
-  navSubtitle: { fontSize: 12, color: colors.textSecondary },
+  navTitle: { fontSize: 16, fontWeight: '600' },
+  navSubtitle: { fontSize: 12 },
 
   // ── Loading ──
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -299,8 +299,6 @@ const styles = StyleSheet.create({
   timeDivider: { alignItems: 'center' },
   timeText: {
     fontSize: 12,
-    color: colors.textMuted,
-    backgroundColor: colors.divider,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 10,
@@ -323,28 +321,24 @@ const styles = StyleSheet.create({
   },
   agentContent: { flex: 1, gap: 4 },
   agentNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  agentName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  agentName: { fontSize: 13, fontWeight: '600' },
   aiBadge: {
-    backgroundColor: colors.primary + '20',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 4,
   },
-  aiBadgeText: { fontSize: 10, fontWeight: '600', color: colors.primary },
+  aiBadgeText: { fontSize: 10, fontWeight: '600' },
   agentBubble: {
-    backgroundColor: colors.card,
     borderRadius: 12,
     borderTopLeftRadius: 0,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
-  agentText: { fontSize: 14, color: colors.textPrimary, lineHeight: 22 },
+  agentText: { fontSize: 14, lineHeight: 22 },
 
   // ── User message ──
   userRow: { alignItems: 'flex-end' },
   userBubble: {
-    backgroundColor: colors.primary,
     borderRadius: 12,
     borderTopRightRadius: 0,
     padding: 12,
@@ -354,7 +348,6 @@ const styles = StyleSheet.create({
 
   // ── Debate card ──
   debateCard: {
-    backgroundColor: colors.card,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
@@ -369,14 +362,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   actionBadgeText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
-  debateTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  debateTitle: { fontSize: 16, fontWeight: '700' },
 
   confidenceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  confLabel: { fontSize: 13, color: colors.textSecondary },
+  confLabel: { fontSize: 13 },
   confBarBg: {
     flex: 1,
     height: 8,
-    backgroundColor: colors.divider,
     borderRadius: 4,
   },
   confBarFill: { height: 8, backgroundColor: '#34C759', borderRadius: 4 },
@@ -398,10 +390,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tradeLine: { fontSize: 13, fontWeight: '600', color: '#34C759' },
-  tradePrice: { fontSize: 12, color: colors.textSecondary },
+  tradePrice: { fontSize: 12 },
 
   reportBtn: { alignItems: 'center', paddingTop: 4 },
-  reportBtnText: { fontSize: 13, fontWeight: '500', color: colors.primary },
+  reportBtnText: { fontSize: 13, fontWeight: '500' },
 
   // ── Thinking indicator ──
   thinkingRow: {
@@ -411,7 +403,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
-  thinkingText: { fontSize: 13, color: colors.textSecondary, fontStyle: 'italic' },
+  thinkingText: { fontSize: 13, fontStyle: 'italic' },
 
   // ── Input bar ──
   inputBar: {
@@ -420,25 +412,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 28,
-    backgroundColor: colors.card,
     borderTopWidth: 1,
-    borderTopColor: colors.cardBorder,
     gap: 10,
   },
   inputField: {
     flex: 1,
     height: 36,
-    backgroundColor: colors.inputBg,
     borderRadius: 18,
     paddingHorizontal: 14,
     justifyContent: 'center',
   },
-  textInput: { fontSize: 14, color: colors.textPrimary },
+  textInput: { fontSize: 14 },
   plusBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
