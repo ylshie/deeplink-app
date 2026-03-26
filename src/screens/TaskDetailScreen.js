@@ -35,6 +35,9 @@ export default function TaskDetailScreen({ navigation, route }) {
   const [signals, setSignals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [executing, setExecuting] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(false);
+  const [error, setError] = useState(null);
+  const autoRunRef = React.useRef(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -52,39 +55,84 @@ export default function TaskDetailScreen({ navigation, route }) {
       }
     }
     fetchData();
+
+    // Cleanup auto-run on unmount
+    return () => {
+      if (autoRunRef.current) clearInterval(autoRunRef.current);
+    };
   }, [id]);
 
+  const runOnce = async () => {
+    const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
+    const teamId = taskTeamMap[id] || 'team-btc';
+
+    const res = await fetch(`${API_BASE_URL}/trading/ai-execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ teamId, autoExecute: true, quoteAmount: 500 }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`Server ${res.status}: ${text.slice(0, 100)}`);
+    }
+
+    const result = await res.json();
+    if (result.debate) {
+      const newSignal = {
+        id: result.debate.id || `sig-${Date.now()}`,
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        action: result.debate.action,
+        confidence: result.debate.confidence,
+        summary: result.debate.summary,
+        trade: result.trade?.message || result.debate.trade,
+        tradePrice: result.debate.tradePrice,
+      };
+      setSignals(prev => [newSignal, ...prev]);
+      setActiveTab('交易');
+    }
+    return result;
+  };
+
+  // Single test run
   const handleTestRun = async () => {
     setExecuting(true);
+    setError(null);
     try {
-      const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
-      const teamId = taskTeamMap[id] || 'team-btc';
-      const res = await fetch(`${API_BASE_URL}/trading/ai-execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamId, autoExecute: true, quoteAmount: 500 }),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.debate) {
-          const newSignal = {
-            id: result.debate.id,
-            time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-            action: result.debate.action,
-            confidence: result.debate.confidence,
-            summary: result.debate.summary,
-            trade: result.trade?.message || result.debate.trade,
-            tradePrice: result.debate.tradePrice,
-          };
-          setSignals(prev => [newSignal, ...prev]);
-          // Switch to 交易 tab to show result
-          setActiveTab('交易');
-        }
-      }
+      await runOnce();
     } catch (e) {
       console.error('Test run failed:', e);
+      setError(e.message);
     } finally {
       setExecuting(false);
+    }
+  };
+
+  // Toggle auto-run (periodic execution like MyAlice scalper)
+  const handleToggleAutoRun = () => {
+    if (autoRunning) {
+      // Stop
+      if (autoRunRef.current) clearInterval(autoRunRef.current);
+      autoRunRef.current = null;
+      setAutoRunning(false);
+    } else {
+      // Start: run immediately, then every 15 minutes
+      setAutoRunning(true);
+      setError(null);
+      handleTestRun(); // first run immediately
+
+      const INTERVAL = 15 * 60 * 1000; // 15 min
+      autoRunRef.current = setInterval(async () => {
+        setExecuting(true);
+        try {
+          await runOnce();
+        } catch (e) {
+          console.error('Auto run failed:', e);
+          setError(e.message);
+        } finally {
+          setExecuting(false);
+        }
+      }, INTERVAL);
     }
   };
 
@@ -215,24 +263,59 @@ export default function TaskDetailScreen({ navigation, route }) {
         </ScrollView>
       )}
 
+      {/* Error banner */}
+      {error && (
+        <View style={[styles.errorBanner, { backgroundColor: '#FEECEB' }]}>
+          <Text style={styles.errorText} numberOfLines={2}>错误: {error}</Text>
+        </View>
+      )}
+
+      {/* Auto-run status */}
+      {autoRunning && (
+        <View style={[styles.autoRunBanner, { backgroundColor: colors.primary + '12' }]}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.autoRunText, { color: colors.primary }]}>
+            自动运行中 · 每 15 分钟执行一次 · {signals.length} 条信号
+          </Text>
+        </View>
+      )}
+
       {/* Bottom Actions */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.testRunBtn, executing && { opacity: 0.6 }]}
-          onPress={handleTestRun}
-          disabled={executing}
-          activeOpacity={0.8}
-        >
-          {executing ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Play size={18} color="#FFFFFF" fill="#FFFFFF" />
-          )}
-          <Text style={styles.testRunText}>{executing ? '分析中...' : '测试运行'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.pauseBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Pause size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        {!autoRunning ? (
+          <>
+            <TouchableOpacity
+              style={[styles.testRunBtn, executing && { opacity: 0.6 }]}
+              onPress={handleTestRun}
+              disabled={executing}
+              activeOpacity={0.8}
+            >
+              {executing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Play size={18} color="#FFFFFF" fill="#FFFFFF" />
+              )}
+              <Text style={styles.testRunText}>{executing ? '分析中...' : '测试运行'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.autoBtn, { borderColor: colors.primary }]}
+              onPress={handleToggleAutoRun}
+              activeOpacity={0.8}
+            >
+              <Play size={16} color={colors.primary} fill={colors.primary} />
+              <Text style={[styles.autoBtnText, { color: colors.primary }]}>自动</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={[styles.stopBtn]}
+            onPress={handleToggleAutoRun}
+            activeOpacity={0.8}
+          >
+            <Pause size={18} color="#FFFFFF" />
+            <Text style={styles.testRunText}>停止自动运行</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -301,5 +384,20 @@ const styles = StyleSheet.create({
   bottomBar: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
   testRunBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 48, borderRadius: 14, gap: 8, backgroundColor: '#4E6EF2' },
   testRunText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-  pauseBtn: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  autoBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 48, borderRadius: 14, borderWidth: 1.5, gap: 6, paddingHorizontal: 18,
+  },
+  autoBtnText: { fontSize: 14, fontWeight: '600' },
+  stopBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 48, borderRadius: 14, gap: 8, backgroundColor: '#F54A45',
+  },
+  errorBanner: { paddingHorizontal: 20, paddingVertical: 8 },
+  errorText: { fontSize: 12, color: '#F54A45' },
+  autoRunBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 20, paddingVertical: 8,
+  },
+  autoRunText: { fontSize: 12, fontWeight: '500' },
 });
