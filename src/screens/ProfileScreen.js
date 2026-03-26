@@ -128,68 +128,64 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        {/* Content */}
+        {/* Content by Segment */}
         <View style={styles.cardList}>
-          {/* API Key Cards */}
-          {apiKeys.map((key) => {
-            const KeyIcon = getIcon(key.icon);
-            return (
-              <View key={key.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.cardLeftSection}>
-                    <View
-                      style={[
-                        styles.apiAvatar,
-                        { backgroundColor: key.iconBg },
-                      ]}
-                    >
-                      <KeyIcon size={22} color="#FFFFFF" />
-                    </View>
-                    <View style={styles.apiInfo}>
-                      <View style={styles.apiTitleRow}>
-                        <Text style={[styles.apiName, { color: colors.textPrimary }]}>{key.name}</Text>
-                        {key.connected && (
-                          <View style={styles.connectedBadge}>
-                            <Text style={styles.connectedText}>已连接</Text>
+          {activeSegment === 'API密钥' && (
+            <>
+              {apiKeys.map((key) => {
+                const KeyIcon = getIcon(key.icon);
+                return (
+                  <View key={key.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.cardLeftSection}>
+                        <View style={[styles.apiAvatar, { backgroundColor: key.iconBg }]}>
+                          <KeyIcon size={22} color="#FFFFFF" />
+                        </View>
+                        <View style={styles.apiInfo}>
+                          <View style={styles.apiTitleRow}>
+                            <Text style={[styles.apiName, { color: colors.textPrimary }]}>{key.name}</Text>
+                            {key.connected && (
+                              <View style={styles.connectedBadge}>
+                                <Text style={styles.connectedText}>已连接</Text>
+                              </View>
+                            )}
                           </View>
-                        )}
+                          <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>{key.permissions}</Text>
+                        </View>
                       </View>
-                      <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>{key.permissions}</Text>
+                      {key.connected && (
+                        <Text style={[styles.checkMark, { color: colors.textPrimary }]}>✓</Text>
+                      )}
+                    </View>
+                    <View style={[styles.cardActionsRow, { borderTopColor: colors.divider }]}>
+                      <TouchableOpacity style={styles.cardAction}>
+                        <Eye size={16} color={colors.textSecondary} />
+                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>查看</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.cardAction}>
+                        <Pencil size={16} color={colors.textSecondary} />
+                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>编辑</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.cardAction}>
+                        <Trash2 size={16} color={colors.textSecondary} />
+                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>删除</Text>
+                      </TouchableOpacity>
                     </View>
                   </View>
-                  {key.connected && (
-                    <Text style={[styles.checkMark, { color: colors.textPrimary }]}>✓</Text>
-                  )}
-                </View>
-                <View style={[styles.cardActionsRow, { borderTopColor: colors.divider }]}>
-                  <TouchableOpacity style={styles.cardAction}>
-                    <Eye size={16} color={colors.textSecondary} />
-                    <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>查看</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cardAction}>
-                    <Pencil size={16} color={colors.textSecondary} />
-                    <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>编辑</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.cardAction}>
-                    <Trash2 size={16} color={colors.textSecondary} />
-                    <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>删除</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
+                );
+              })}
+              <TouchableOpacity style={[styles.addKeyBtn, { borderColor: colors.cardBorder }]}>
+                <Plus size={18} color={colors.textSecondary} />
+                <Text style={[styles.addKeyText, { color: colors.textSecondary }]}>添加API密钥</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
-          {/* Portfolio Card */}
-          {portfolio && (
+          {activeSegment === '模板交易' && portfolio && (
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
               <View style={styles.cardHeaderRow}>
                 <View style={styles.cardLeftSection}>
-                  <View
-                    style={[
-                      styles.apiAvatar,
-                      { backgroundColor: portfolio.iconBg },
-                    ]}
-                  >
+                  <View style={[styles.apiAvatar, { backgroundColor: portfolio.iconBg }]}>
                     {(() => {
                       const PortIcon = getIcon(portfolio.icon);
                       return <PortIcon size={22} color="#FFFFFF" />;
@@ -220,41 +216,45 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* Add API Key */}
-          <TouchableOpacity style={[styles.addKeyBtn, { borderColor: colors.cardBorder }]}>
-            <Plus size={18} color={colors.textSecondary} />
-            <Text style={[styles.addKeyText, { color: colors.textSecondary }]}>添加API密钥</Text>
-          </TouchableOpacity>
-
-          {/* Theme Switcher */}
-          <View style={[styles.themeSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.themeSectionTitle, { color: colors.textPrimary }]}>外观模式</Text>
-            <View style={styles.themeOptions}>
-              {[
-                { key: 'system', label: '跟随系统', Icon: Monitor },
-                { key: 'light', label: '浅色', Icon: Sun },
-                { key: 'dark', label: '深色', Icon: Moon },
-              ].map(({ key, label, Icon }) => {
-                const isActive = mode === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[
-                      styles.themeOption,
-                      { backgroundColor: isActive ? colors.primary + '15' : 'transparent', borderColor: isActive ? colors.primary : colors.cardBorder },
-                    ]}
-                    onPress={() => setMode(key)}
-                    activeOpacity={0.7}
-                  >
-                    <Icon size={20} color={isActive ? colors.primary : colors.textMuted} />
-                    <Text style={[styles.themeOptionText, { color: isActive ? colors.primary : colors.textSecondary }]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+          {activeSegment === '设置' && (
+            <View style={[styles.themeSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.themeSectionTitle, { color: colors.textPrimary }]}>外观模式</Text>
+              <View style={styles.themeOptions}>
+                {[
+                  { key: 'system', label: '跟随系统', Icon: Monitor },
+                  { key: 'light', label: '浅色', Icon: Sun },
+                  { key: 'dark', label: '深色', Icon: Moon },
+                ].map(({ key, label, Icon }) => {
+                  const isActive = mode === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.themeOption,
+                        { backgroundColor: isActive ? colors.primary + '15' : 'transparent', borderColor: isActive ? colors.primary : colors.cardBorder },
+                      ]}
+                      onPress={() => setMode(key)}
+                      activeOpacity={0.7}
+                    >
+                      <Icon size={20} color={isActive ? colors.primary : colors.textMuted} />
+                      <Text style={[styles.themeOptionText, { color: isActive ? colors.primary : colors.textSecondary }]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          </View>
+          )}
+
+          {activeSegment === '关于' && (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.apiName, { color: colors.textPrimary }]}>DeepLink v1.0.0</Text>
+              <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>
+                多 Agent 加密货币分析与交易平台
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </View>
