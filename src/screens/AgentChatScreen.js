@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { ChevronLeft, Ellipsis, Smile, Mic, Send } from 'lucide-react-native';
 import { useTheme } from '../theme';
@@ -89,8 +91,11 @@ export default function AgentChatScreen({ navigation, route }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       {/* Nav Bar */}
       <View style={styles.navBar}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -115,9 +120,11 @@ export default function AgentChatScreen({ navigation, route }) {
           style={styles.chatArea}
           contentContainerStyle={styles.chatContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() =>
-            scrollRef.current?.scrollToEnd({ animated: false })
+            scrollRef.current?.scrollToEnd({ animated: true })
           }
+          keyboardDismissMode="interactive"
         >
           {messages.map(renderMessage)}
           {sending && (
@@ -152,7 +159,7 @@ export default function AgentChatScreen({ navigation, route }) {
           <Send size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -219,8 +226,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 28,
+    paddingTop: 10,
+    paddingBottom: 10,
     borderTopWidth: 1,
     gap: 10,
   },

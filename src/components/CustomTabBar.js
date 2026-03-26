@@ -47,7 +47,7 @@ export default function CustomTabBar({ state, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 },
+  wrapper: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
   pill: {
     flexDirection: 'row', height: 62, borderRadius: 32, padding: 4, borderWidth: 1,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12, elevation: 4,

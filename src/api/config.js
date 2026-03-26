@@ -1,12 +1,5 @@
-import { Platform } from 'react-native';
-
 // Backend server URL
-// Android emulator uses 10.0.2.2 to reach host localhost
-// iOS simulator and web use localhost directly
-const LOCALHOST =
-  Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-
-export const API_BASE_URL = `http://${LOCALHOST}:3000/api`;
+export const API_BASE_URL = 'https://deeplink.gotest24.com/api';
 
 /**
  * Generic fetch wrapper for API calls.

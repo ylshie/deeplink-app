@@ -10,7 +10,7 @@ function AppInner() {
   return (
     <NavigationContainer>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
         <AppNavigator />
       </SafeAreaView>
     </NavigationContainer>
