@@ -37,17 +37,26 @@ export default function TaskDetailScreen({ navigation, route }) {
   const [executing, setExecuting] = useState(false);
   const [autoRunning, setAutoRunning] = useState(false);
   const [error, setError] = useState(null);
-  const autoRunRef = React.useRef(null);
+  const pollRef = React.useRef(null);
 
+  const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
+  const teamId = taskTeamMap[id] || 'team-btc';
+
+  // Fetch initial data + check if auto-trader is already running on server
   useEffect(() => {
     async function fetchData() {
       try {
-        const [runsData, sigRes] = await Promise.all([
+        const [runsData, sigRes, autoStatus] = await Promise.all([
           getTaskRuns(id),
           fetch(`${API_BASE_URL}/trading/signals/${id}`).then(r => r.ok ? r.json() : []).catch(() => []),
+          fetch(`${API_BASE_URL}/trading/auto/status/${id}`).then(r => r.ok ? r.json() : null).catch(() => null),
         ]);
         setRuns(runsData);
         setSignals(sigRes);
+        if (autoStatus?.status === 'running') {
+          setAutoRunning(true);
+          startPolling(); // resume polling UI
+        }
       } catch (e) {
         console.error('Failed to fetch task data:', e);
       } finally {
@@ -56,83 +65,86 @@ export default function TaskDetailScreen({ navigation, route }) {
     }
     fetchData();
 
-    // Cleanup auto-run on unmount
     return () => {
-      if (autoRunRef.current) clearInterval(autoRunRef.current);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [id]);
 
-  const runOnce = async () => {
-    const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
-    const teamId = taskTeamMap[id] || 'team-btc';
-
-    const res = await fetch(`${API_BASE_URL}/trading/ai-execute`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ teamId, autoExecute: true, quoteAmount: 500 }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new Error(`Server ${res.status}: ${text.slice(0, 100)}`);
-    }
-
-    const result = await res.json();
-    if (result.debate) {
-      const newSignal = {
-        id: result.debate.id || `sig-${Date.now()}`,
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
-        action: result.debate.action,
-        confidence: result.debate.confidence,
-        summary: result.debate.summary,
-        trade: result.trade?.message || result.debate.trade,
-        tradePrice: result.debate.tradePrice,
-      };
-      setSignals(prev => [newSignal, ...prev]);
-      setActiveTab('交易');
-    }
-    return result;
+  // Poll server for new signals every 10s while auto-running
+  const startPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      try {
+        const sigs = await fetch(`${API_BASE_URL}/trading/signals/${id}`).then(r => r.ok ? r.json() : []);
+        if (sigs.length > 0) setSignals(sigs);
+      } catch { /* ignore */ }
+    }, 10000);
   };
 
-  // Single test run
+  const stopPolling = () => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  };
+
+  // Single test run (one-shot, still via ai-execute)
   const handleTestRun = async () => {
     setExecuting(true);
     setError(null);
     try {
-      await runOnce();
+      const res = await fetch(`${API_BASE_URL}/trading/ai-execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId, autoExecute: true, quoteAmount: 500 }),
+      });
+      if (!res.ok) throw new Error(`Server ${res.status}`);
+      const result = await res.json();
+      if (result.debate) {
+        const newSignal = {
+          id: result.debate.id || `sig-${Date.now()}`,
+          time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          action: result.debate.action,
+          confidence: result.debate.confidence,
+          summary: result.debate.summary,
+          trade: result.trade?.message || result.debate.trade,
+          tradePrice: result.debate.tradePrice,
+          timestamp: Date.now(),
+        };
+        setSignals(prev => [newSignal, ...prev]);
+        setActiveTab('交易');
+      }
     } catch (e) {
-      console.error('Test run failed:', e);
       setError(e.message);
     } finally {
       setExecuting(false);
     }
   };
 
-  // Toggle auto-run (periodic execution like MyAlice scalper)
-  const handleToggleAutoRun = () => {
-    if (autoRunning) {
-      // Stop
-      if (autoRunRef.current) clearInterval(autoRunRef.current);
-      autoRunRef.current = null;
-      setAutoRunning(false);
-    } else {
-      // Start: run immediately, then every 15 minutes
-      setAutoRunning(true);
-      setError(null);
-      handleTestRun(); // first run immediately
-
-      const INTERVAL = 15 * 60 * 1000; // 15 min
-      autoRunRef.current = setInterval(async () => {
-        setExecuting(true);
-        try {
-          await runOnce();
-        } catch (e) {
-          console.error('Auto run failed:', e);
-          setError(e.message);
-        } finally {
-          setExecuting(false);
-        }
-      }, INTERVAL);
+  // Toggle server-side auto-run
+  const handleToggleAutoRun = async () => {
+    setError(null);
+    try {
+      if (autoRunning) {
+        // Stop on server
+        await fetch(`${API_BASE_URL}/trading/auto/stop`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: id }),
+        });
+        setAutoRunning(false);
+        stopPolling();
+      } else {
+        // Start on server
+        const res = await fetch(`${API_BASE_URL}/trading/auto/start`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId: id, teamId, autoExecute: true, quoteAmount: 500 }),
+        });
+        if (!res.ok) throw new Error(`Server ${res.status}`);
+        setAutoRunning(true);
+        setActiveTab('交易');
+        startPolling();
+      }
+    } catch (e) {
+      setError(e.message);
     }
   };
 
