@@ -10,469 +10,250 @@ import {
 import {
   Settings,
   User,
-  Eye,
-  Pencil,
-  Trash2,
-  Plus,
-  Wallet,
-  History,
-  BarChart3,
+  Key,
+  Bell,
+  Languages,
+  LogOut,
+  ChevronRight,
   Sun,
   Moon,
   Monitor,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import { getProfile, getApiKeys, getPortfolio } from '../api';
-import { getIcon } from '../components/IconMap';
-
-const segments = ['API密钥', '模板交易', '设置', '关于'];
+import { API_BASE_URL } from '../api/config';
 
 export default function ProfileScreen() {
   const { colors, isDark, mode, setMode } = useTheme();
-  const [activeSegment, setActiveSegment] = useState('设置');
-  const [profile, setProfile] = useState(null);
-  const [apiKeys, setApiKeys] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchAll() {
+    (async () => {
       try {
-        const [p, keys, port] = await Promise.all([
-          getProfile(),
-          getApiKeys(),
-          getPortfolio(),
-        ]);
-        setProfile(p);
-        setApiKeys(keys);
-        setPortfolio(port);
+        const res = await fetch(`${API_BASE_URL}/trading/portfolio`);
+        if (res.ok) {
+          setPortfolio(await res.json());
+        }
       } catch (e) {
-        console.error('Failed to fetch profile:', e);
+        // Fallback mock
+        setPortfolio({
+          balance: 10000,
+          totalPnl: 0,
+          totalPnlPct: 0,
+          positionCount: 0,
+        });
       } finally {
         setLoading(false);
       }
-    }
-    fetchAll();
+    })();
   }, []);
 
-  if (loading || !profile) {
+  if (loading) {
     return (
-      <View style={[styles.container, styles.loadingWrap]}>
+      <View style={[styles.container, styles.loadingWrap, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="small" color={colors.primary} />
       </View>
     );
   }
 
-  const stats = [
-    { value: profile.stats.totalBalance, label: '模拟总额' },
-    { value: String(profile.stats.positions), label: '持仓数' },
-    { value: profile.stats.pnl, label: '累计盈亏', color: profile.stats.pnlColor },
-  ];
+  const pnlColor = (portfolio?.totalPnl || 0) >= 0 ? '#34C759' : '#F54A45';
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-
-      {/* Settings Icon */}
-      <View style={styles.settingsRow}>
-        <TouchableOpacity>
-          <Settings size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Section */}
-        <View style={styles.profileSection}>
-          <View style={[styles.avatarCircle, { borderColor: colors.cardBorder }]}>
-            <User size={36} color={colors.textMuted} />
-          </View>
-          <Text style={[styles.nameText, { color: colors.textPrimary }]}>{profile.name}</Text>
-          <Text style={[styles.idText, { color: colors.textSecondary }]}>DEEPLINK号: {profile.deepLinkId}</Text>
-          <TouchableOpacity style={[styles.editBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.editBtnText, { color: colors.textPrimary }]}>编辑个人资料</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>我的</Text>
+          <TouchableOpacity>
+            <Settings size={22} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          {stats.map((s, i) => (
-            <View key={i} style={styles.stat}>
-              <Text style={[styles.statValue, { color: colors.textPrimary }, s.color && { color: s.color }]}>
-                {s.value}
+        {/* Profile Card */}
+        <TouchableOpacity style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>E</Text>
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileName, { color: colors.textPrimary }]}>Eric</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>eric@deeplink.ai</Text>
+          </View>
+          <ChevronRight size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
+        {/* Portfolio Card */}
+        <View style={[styles.portfolioCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.portfolioLabel, { color: colors.textSecondary }]}>模拟交易账户</Text>
+          <Text style={[styles.portfolioBalance, { color: colors.textPrimary }]}>
+            ${(portfolio?.balance || 10000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+          <View style={styles.portfolioStats}>
+            <View style={styles.portfolioStat}>
+              <Text style={[styles.statValue, { color: pnlColor }]}>
+                {(portfolio?.totalPnl || 0) >= 0 ? '+' : ''}${Math.abs(portfolio?.totalPnl || 0).toFixed(2)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{s.label}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>总盈亏</Text>
             </View>
-          ))}
+            <View style={styles.portfolioStat}>
+              <Text style={[styles.statValue, { color: pnlColor }]}>
+                {(portfolio?.totalPnlPct || 0) >= 0 ? '+' : ''}{(portfolio?.totalPnlPct || 0).toFixed(2)}%
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>收益率</Text>
+            </View>
+            <View style={styles.portfolioStat}>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                {portfolio?.positionCount || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>持仓数</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Segment Control */}
-        <View style={[styles.segmentRow, { borderBottomColor: colors.divider }]}>
-          {segments.map((seg) => (
-            <TouchableOpacity
-              key={seg}
-              style={[
-                styles.segmentItem,
-                activeSegment === seg && [styles.segmentItemActive, { borderBottomColor: colors.primary }],
-              ]}
-              onPress={() => setActiveSegment(seg)}
-            >
-              <Text
-                style={[
-                  styles.segmentText,
-                  { color: colors.textSecondary },
-                  activeSegment === seg && { color: colors.primary, fontWeight: '600' },
-                ]}
-              >
-                {seg}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Menu Section */}
+        <View style={[styles.menuSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+          <MenuItem icon={Key} label="API 密钥管理" colors={colors} />
+          <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
+          <MenuItem icon={Bell} label="通知设置" colors={colors} />
+          <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
+          <MenuItem icon={Languages} label="语言" value="中文" colors={colors} />
+          <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
 
-        {/* Content by Segment */}
-        <View style={styles.cardList}>
-          {activeSegment === 'API密钥' && (
-            <>
-              {apiKeys.map((key) => {
-                const KeyIcon = getIcon(key.icon);
-                return (
-                  <View key={key.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.cardLeftSection}>
-                        <View style={[styles.apiAvatar, { backgroundColor: key.iconBg }]}>
-                          <KeyIcon size={22} color="#FFFFFF" />
-                        </View>
-                        <View style={styles.apiInfo}>
-                          <View style={styles.apiTitleRow}>
-                            <Text style={[styles.apiName, { color: colors.textPrimary }]}>{key.name}</Text>
-                            {key.connected && (
-                              <View style={styles.connectedBadge}>
-                                <Text style={styles.connectedText}>已连接</Text>
-                              </View>
-                            )}
-                          </View>
-                          <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>{key.permissions}</Text>
-                        </View>
-                      </View>
-                      {key.connected && (
-                        <Text style={[styles.checkMark, { color: colors.textPrimary }]}>✓</Text>
-                      )}
-                    </View>
-                    <View style={[styles.cardActionsRow, { borderTopColor: colors.divider }]}>
-                      <TouchableOpacity style={styles.cardAction}>
-                        <Eye size={16} color={colors.textSecondary} />
-                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>查看</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.cardAction}>
-                        <Pencil size={16} color={colors.textSecondary} />
-                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>编辑</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.cardAction}>
-                        <Trash2 size={16} color={colors.textSecondary} />
-                        <Text style={[styles.cardActionText, { color: colors.textSecondary }]}>删除</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })}
-              <TouchableOpacity style={[styles.addKeyBtn, { borderColor: colors.cardBorder }]}>
-                <Plus size={18} color={colors.textSecondary} />
-                <Text style={[styles.addKeyText, { color: colors.textSecondary }]}>添加API密钥</Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {activeSegment === '模板交易' && portfolio && (
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.cardLeftSection}>
-                  <View style={[styles.apiAvatar, { backgroundColor: portfolio.iconBg }]}>
-                    {(() => {
-                      const PortIcon = getIcon(portfolio.icon);
-                      return <PortIcon size={22} color="#FFFFFF" />;
-                    })()}
-                  </View>
-                  <View style={styles.apiInfo}>
-                    <Text style={[styles.apiName, { color: colors.textPrimary }]}>{portfolio.name}</Text>
-                    <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>
-                      余额 {portfolio.balance} · {portfolio.positionCount} 个持仓
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.portfolioActions}>
-                <TouchableOpacity style={[styles.portfolioBtn, { backgroundColor: colors.divider }]}>
-                  <Wallet size={14} color={colors.textSecondary} />
-                  <Text style={[styles.portfolioBtnText, { color: colors.textSecondary }]}>持仓</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.portfolioBtn, { backgroundColor: colors.divider }]}>
-                  <History size={14} color={colors.textSecondary} />
-                  <Text style={[styles.portfolioBtnText, { color: colors.textSecondary }]}>历史</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.portfolioBtn, { backgroundColor: colors.divider }]}>
-                  <BarChart3 size={14} color={colors.textSecondary} />
-                  <Text style={[styles.portfolioBtnText, { color: colors.textSecondary }]}>量量</Text>
-                </TouchableOpacity>
-              </View>
+          {/* Theme Switcher inline */}
+          <View style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              {isDark ? <Moon size={20} color={colors.primary} /> : <Sun size={20} color={colors.primary} />}
+              <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>外观模式</Text>
             </View>
-          )}
-
-          {activeSegment === '设置' && (
-            <View style={[styles.themeSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.themeSectionTitle, { color: colors.textPrimary }]}>外观模式</Text>
-              <View style={styles.themeOptions}>
-                {[
-                  { key: 'system', label: '跟随系统', Icon: Monitor },
-                  { key: 'light', label: '浅色', Icon: Sun },
-                  { key: 'dark', label: '深色', Icon: Moon },
-                ].map(({ key, label, Icon }) => {
-                  const isActive = mode === key;
-                  return (
-                    <TouchableOpacity
-                      key={key}
-                      style={[
-                        styles.themeOption,
-                        { backgroundColor: isActive ? colors.primary + '15' : 'transparent', borderColor: isActive ? colors.primary : colors.cardBorder },
-                      ]}
-                      onPress={() => setMode(key)}
-                      activeOpacity={0.7}
-                    >
-                      <Icon size={20} color={isActive ? colors.primary : colors.textMuted} />
-                      <Text style={[styles.themeOptionText, { color: isActive ? colors.primary : colors.textSecondary }]}>
-                        {label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+            <View style={styles.themeToggle}>
+              {[
+                { key: 'system', Icon: Monitor },
+                { key: 'light', Icon: Sun },
+                { key: 'dark', Icon: Moon },
+              ].map(({ key, Icon }) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[
+                    styles.themeBtn,
+                    { backgroundColor: mode === key ? colors.primary + '18' : 'transparent' },
+                  ]}
+                  onPress={() => setMode(key)}
+                >
+                  <Icon size={16} color={mode === key ? colors.primary : colors.textMuted} />
+                </TouchableOpacity>
+              ))}
             </View>
-          )}
+          </View>
 
-          {activeSegment === '关于' && (
-            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.apiName, { color: colors.textPrimary }]}>DeepLink v1.0.0</Text>
-              <Text style={[styles.apiDesc, { color: colors.textSecondary }]}>
-                多 Agent 加密货币分析与交易平台
-              </Text>
+          <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuLeft}>
+              <LogOut size={20} color="#F54A45" />
+              <Text style={[styles.menuLabel, { color: '#F54A45' }]}>退出登录</Text>
             </View>
-          )}
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
   );
 }
 
+function MenuItem({ icon: Icon, label, value, colors, onPress }) {
+  return (
+    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
+      <View style={styles.menuLeft}>
+        <Icon size={20} color={colors.primary} />
+        <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>{label}</Text>
+      </View>
+      <View style={styles.menuRight}>
+        {value && <Text style={[styles.menuValue, { color: colors.textSecondary }]}>{value}</Text>}
+        <ChevronRight size={18} color={colors.textMuted} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingWrap: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingsRow: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    height: 32,
-    justifyContent: 'center',
-  },
-  profileSection: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 16,
-  },
-  avatarCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#F0F0F0',
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nameText: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  idText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: -8,
-  },
-  editBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  editBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-  },
-  stat: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statLabel: {
-    fontSize: 12,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    height: 44,
-  },
-  segmentItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentItemActive: {
-    borderBottomWidth: 2,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  cardList: {
-    padding: 20,
-    gap: 16,
-  },
-  card: {
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    gap: 16,
-  },
-  cardHeaderRow: {
+  container: { flex: 1 },
+  loadingWrap: { justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { paddingBottom: 20 },
+
+  // Header
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    height: 50,
   },
-  cardLeftSection: {
+  headerTitle: { fontSize: 28, fontWeight: '700' },
+
+  // Profile card
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  apiAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  apiInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  apiTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  apiName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  connectedBadge: {
-    backgroundColor: '#34C75920',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  connectedText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#34C759',
-  },
-  apiDesc: {
-    fontSize: 13,
-  },
-  checkMark: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  cardActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 4,
-    borderTopWidth: 1,
-  },
-  cardAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  cardActionText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  portfolioActions: {
-    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 20,
+    borderWidth: 1,
     gap: 16,
   },
-  portfolioBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  portfolioBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  addKeyBtn: {
-    flexDirection: 'row',
+  profileAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#4E6EF2',
     alignItems: 'center',
     justifyContent: 'center',
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
   },
-  addKeyText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  themeSection: {
-    borderRadius: 16,
+  profileAvatarText: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
+  profileInfo: { flex: 1, gap: 4 },
+  profileName: { fontSize: 18, fontWeight: '600' },
+  profileEmail: { fontSize: 14 },
+
+  // Portfolio card
+  portfolioCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
     padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
-    gap: 14,
+    gap: 16,
   },
-  themeSectionTitle: {
-    fontSize: 15,
-    fontWeight: '600',
+  portfolioLabel: { fontSize: 12, fontWeight: '500', letterSpacing: 1 },
+  portfolioBalance: { fontSize: 32, fontWeight: '700' },
+  portfolioStats: { flexDirection: 'row', gap: 20 },
+  portfolioStat: { gap: 4 },
+  statValue: { fontSize: 16, fontWeight: '600' },
+  statLabel: { fontSize: 12 },
+
+  // Menu section
+  menuSection: {
+    marginHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  themeOptions: {
+  menuItem: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  themeOption: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 6,
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    paddingHorizontal: 18,
   },
-  themeOptionText: {
-    fontSize: 12,
-    fontWeight: '500',
+  menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  menuRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  menuLabel: { fontSize: 15, fontWeight: '500' },
+  menuValue: { fontSize: 14 },
+  menuDivider: { height: 1, marginHorizontal: 18 },
+
+  // Theme toggle
+  themeToggle: { flexDirection: 'row', gap: 4 },
+  themeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
