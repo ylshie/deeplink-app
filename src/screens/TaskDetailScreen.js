@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import {
   ChevronLeft,
@@ -27,6 +28,15 @@ export default function TaskDetailScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('stopped');
   const [error, setError] = useState(null);
+  const [config, setConfig] = useState({
+    pair: 'BTC/USDT',
+    timeframe: '15分钟',
+    quoteAmount: '500',
+    intervalMin: '15',
+    confidenceThreshold: '70',
+    maxPositions: '1',
+  });
+  const [configEditing, setConfigEditing] = useState(false);
   const pollRef = React.useRef(null);
 
   const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
@@ -77,7 +87,13 @@ export default function TaskDetailScreen({ navigation, route }) {
       const res = await fetch(`${API_BASE_URL}/trading/auto/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: id, teamId, autoExecute: true, quoteAmount: 500 }),
+        body: JSON.stringify({
+          taskId: id,
+          teamId,
+          autoExecute: true,
+          quoteAmount: parseInt(config.quoteAmount) || 500,
+          intervalMs: (parseInt(config.intervalMin) || 15) * 60 * 1000,
+        }),
       });
       if (!res.ok) throw new Error(`Server ${res.status}`);
       setStatus('running');
@@ -183,14 +199,28 @@ export default function TaskDetailScreen({ navigation, route }) {
     );
   };
 
+  const updateConfig = (key, val) => setConfig(prev => ({ ...prev, [key]: val }));
+
   const renderConfig = () => (
-    <View style={[styles.configCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-      <CfgRow label="交易对" value="BTC/USDT" colors={colors} />
-      <CfgRow label="时间框架" value="15分钟" colors={colors} />
-      <CfgRow label="单笔金额" value="500 USDT" colors={colors} />
-      <CfgRow label="执行间隔" value="15 分钟" colors={colors} />
-      <CfgRow label="自动执行阈值" value="confidence ≥ 70%" colors={colors} />
-      <CfgRow label="最大持仓" value="1" colors={colors} last />
+    <View style={{ gap: 12 }}>
+      <View style={[styles.configCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+        <CfgField label="交易对" value={config.pair} editing={configEditing} onChange={v => updateConfig('pair', v)} colors={colors} />
+        <CfgField label="时间框架" value={config.timeframe} editing={configEditing} onChange={v => updateConfig('timeframe', v)} colors={colors} />
+        <CfgField label="单笔金额 (USDT)" value={config.quoteAmount} editing={configEditing} onChange={v => updateConfig('quoteAmount', v)} colors={colors} keyboard="numeric" />
+        <CfgField label="执行间隔 (分钟)" value={config.intervalMin} editing={configEditing} onChange={v => updateConfig('intervalMin', v)} colors={colors} keyboard="numeric" />
+        <CfgField label="执行阈值 (confidence%)" value={config.confidenceThreshold} editing={configEditing} onChange={v => updateConfig('confidenceThreshold', v)} colors={colors} keyboard="numeric" />
+        <CfgField label="最大持仓" value={config.maxPositions} editing={configEditing} onChange={v => updateConfig('maxPositions', v)} colors={colors} keyboard="numeric" last />
+      </View>
+      <TouchableOpacity
+        style={[styles.editConfigBtn, { backgroundColor: configEditing ? colors.primary : colors.card, borderColor: colors.cardBorder }]}
+        onPress={() => setConfigEditing(!configEditing)}
+        activeOpacity={0.8}
+      >
+        <Pencil size={16} color={configEditing ? '#FFF' : colors.primary} />
+        <Text style={[styles.editConfigText, { color: configEditing ? '#FFF' : colors.primary }]}>
+          {configEditing ? '保存配置' : '编辑配置'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -274,19 +304,30 @@ export default function TaskDetailScreen({ navigation, route }) {
   );
 }
 
-function CfgRow({ label, value, colors, last }) {
+function CfgField({ label, value, editing, onChange, colors, keyboard, last }) {
   return (
     <View style={[cfgS.row, !last && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
       <Text style={[cfgS.label, { color: '#646A73' }]}>{label}</Text>
-      <Text style={[cfgS.value, { color: colors.textPrimary }]}>{value}</Text>
+      {editing ? (
+        <TextInput
+          style={[cfgS.input, { color: colors.textPrimary, borderColor: colors.primary + '40', backgroundColor: colors.primary + '08' }]}
+          value={value}
+          onChangeText={onChange}
+          keyboardType={keyboard || 'default'}
+          returnKeyType="done"
+        />
+      ) : (
+        <Text style={[cfgS.value, { color: colors.textPrimary }]}>{value}</Text>
+      )}
     </View>
   );
 }
 
 const cfgS = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16 },
-  label: { fontSize: 14 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, minHeight: 48 },
+  label: { fontSize: 14, flex: 1 },
   value: { fontSize: 14, fontWeight: '500' },
+  input: { fontSize: 14, fontWeight: '500', textAlign: 'right', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, minWidth: 100 },
 });
 
 const styles = StyleSheet.create({
@@ -338,6 +379,11 @@ const styles = StyleSheet.create({
   signalTokens: { fontSize: 11 },
 
   configCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  editConfigBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 44, borderRadius: 12, borderWidth: 1, gap: 8,
+  },
+  editConfigText: { fontSize: 14, fontWeight: '600' },
 
   // Banners
   errorBar: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#FEECEB' },
