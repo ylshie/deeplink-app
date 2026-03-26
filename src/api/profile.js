@@ -1,6 +1,4 @@
-import { USE_MOCK, mockDelay, fetchApi } from './config';
-
-// ─── Mock Data ───────────────────────────────────────────────
+// Profile data — local mock until backend supports these endpoints.
 
 const MOCK_PROFILE = {
   id: 'user-1',
@@ -36,40 +34,18 @@ const MOCK_PORTFOLIO = {
   iconBg: '#34C759',
 };
 
-// ─── API Functions ───────────────────────────────────────────
-
-/**
- * Fetch current user profile.
- * GET /profile
- */
 export async function getProfile() {
-  if (USE_MOCK) return mockDelay(MOCK_PROFILE);
-  return fetchApi('/profile');
+  return MOCK_PROFILE;
 }
 
-/**
- * Fetch user's API keys.
- * GET /profile/api-keys
- */
 export async function getApiKeys() {
-  if (USE_MOCK) return mockDelay(MOCK_API_KEYS);
-  return fetchApi('/profile/api-keys');
+  return MOCK_API_KEYS;
 }
 
-/**
- * Fetch user's portfolio summary.
- * GET /profile/portfolio
- */
 export async function getPortfolio() {
-  if (USE_MOCK) return mockDelay(MOCK_PORTFOLIO);
-  return fetchApi('/profile/portfolio');
+  return MOCK_PORTFOLIO;
 }
 
-/**
- * Delete an API key.
- * DELETE /profile/api-keys/:id
- */
 export async function deleteApiKey(keyId) {
-  if (USE_MOCK) return mockDelay({ success: true });
-  return fetchApi(`/profile/api-keys/${keyId}`, { method: 'DELETE' });
+  return { success: true };
 }

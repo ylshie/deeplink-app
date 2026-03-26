@@ -1,6 +1,4 @@
-import { USE_MOCK, mockDelay, fetchApi } from './config';
-
-// ─── Mock Data ───────────────────────────────────────────────
+// Tasks data — local mock until backend supports these endpoints.
 
 const MOCK_TASKS = [
   {
@@ -84,50 +82,23 @@ const MOCK_TASK_RUNS = {
   ],
 };
 
-// ─── API Functions ───────────────────────────────────────────
-
-/**
- * Fetch all tasks with optional status filter.
- * GET /tasks?status=active|paused|draft
- */
 export async function getTasks(statusFilter) {
-  if (USE_MOCK) {
-    let list = MOCK_TASKS;
-    if (statusFilter && statusFilter !== '全部') {
-      const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
-      list = list.filter((t) => t.status === map[statusFilter]);
-    }
-    return mockDelay(list);
+  let list = MOCK_TASKS;
+  if (statusFilter && statusFilter !== '全部') {
+    const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
+    list = list.filter((t) => t.status === map[statusFilter]);
   }
-  const query = statusFilter && statusFilter !== '全部' ? `?status=${statusFilter}` : '';
-  return fetchApi(`/tasks${query}`);
+  return list;
 }
 
-/**
- * Fetch run history for a specific task.
- * GET /tasks/:id/runs
- */
 export async function getTaskRuns(taskId) {
-  if (USE_MOCK) {
-    return mockDelay(MOCK_TASK_RUNS[taskId] || []);
-  }
-  return fetchApi(`/tasks/${taskId}/runs`);
+  return MOCK_TASK_RUNS[taskId] || [];
 }
 
-/**
- * Trigger an immediate run for a task.
- * POST /tasks/:id/run
- */
 export async function runTask(taskId) {
-  if (USE_MOCK) return mockDelay({ success: true });
-  return fetchApi(`/tasks/${taskId}/run`, { method: 'POST' });
+  return { success: true };
 }
 
-/**
- * Pause a running task.
- * POST /tasks/:id/pause
- */
 export async function pauseTask(taskId) {
-  if (USE_MOCK) return mockDelay({ success: true });
-  return fetchApi(`/tasks/${taskId}/pause`, { method: 'POST' });
+  return { success: true };
 }
