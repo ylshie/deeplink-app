@@ -12,7 +12,6 @@ import {
   Pencil,
   Play,
   Pause,
-  Square,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
@@ -87,18 +86,6 @@ export default function TaskDetailScreen({ navigation, route }) {
   };
 
   const handlePause = async () => {
-    setError(null);
-    try {
-      await fetch(`${API_BASE_URL}/trading/auto/stop`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: id }),
-      });
-      setStatus('paused');
-      stopPolling();
-    } catch (e) { setError(e.message); }
-  };
-
-  const handleStop = async () => {
     setError(null);
     try {
       await fetch(`${API_BASE_URL}/trading/auto/stop`, {
@@ -207,8 +194,8 @@ export default function TaskDetailScreen({ navigation, route }) {
     </View>
   );
 
-  const statusColor = status === 'running' ? '#34C759' : status === 'paused' ? '#FF9500' : colors.textMuted;
-  const statusText = status === 'running' ? '运行中 · 15m' : status === 'paused' ? '已暂停' : '未运行';
+  const statusColor = status === 'running' ? '#34C759' : colors.textMuted;
+  const statusText = status === 'running' ? '运行中 · 15m' : '已暂停';
   const executedCount = signals.filter(isTradeExecution).length;
 
   return (
@@ -271,35 +258,16 @@ export default function TaskDetailScreen({ navigation, route }) {
 
       {/* Bottom */}
       <View style={styles.bottomBar}>
-        {status === 'stopped' && (
+        {status !== 'running' ? (
           <TouchableOpacity style={styles.primaryBtn} onPress={handleStart} activeOpacity={0.8}>
             <Play size={18} color="#FFF" fill="#FFF" />
             <Text style={styles.btnWhite}>测试运行</Text>
           </TouchableOpacity>
-        )}
-        {status === 'running' && (
-          <>
-            <TouchableOpacity style={[styles.flexBtn, { backgroundColor: '#FF9500' }]} onPress={handlePause} activeOpacity={0.8}>
-              <Pause size={18} color="#FFF" />
-              <Text style={styles.btnWhite}>暂停</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.flexBtn, { backgroundColor: '#F54A45' }]} onPress={handleStop} activeOpacity={0.8}>
-              <Square size={16} color="#FFF" fill="#FFF" />
-              <Text style={styles.btnWhite}>停止</Text>
-            </TouchableOpacity>
-          </>
-        )}
-        {status === 'paused' && (
-          <>
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleStart} activeOpacity={0.8}>
-              <Play size={18} color="#FFF" fill="#FFF" />
-              <Text style={styles.btnWhite}>继续运行</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.flexBtn, { backgroundColor: '#F54A45' }]} onPress={handleStop} activeOpacity={0.8}>
-              <Square size={16} color="#FFF" fill="#FFF" />
-              <Text style={styles.btnWhite}>停止</Text>
-            </TouchableOpacity>
-          </>
+        ) : (
+          <TouchableOpacity style={styles.pauseBtn} onPress={handlePause} activeOpacity={0.8}>
+            <Pause size={18} color="#FFF" />
+            <Text style={styles.btnWhite}>暂停</Text>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -383,9 +351,9 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     height: 48, borderRadius: 14, gap: 8, backgroundColor: '#4E6EF2',
   },
-  flexBtn: {
+  pauseBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    height: 48, borderRadius: 14, gap: 8,
+    height: 48, borderRadius: 14, gap: 8, backgroundColor: '#FF9500',
   },
   btnWhite: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });

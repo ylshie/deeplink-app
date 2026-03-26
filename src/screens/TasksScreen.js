@@ -17,6 +17,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getTasks } from '../api';
+import { API_BASE_URL } from '../api/config';
 
 const filters = ['全部', '运行中', '已暂停', '草稿'];
 
@@ -24,13 +25,20 @@ export default function TasksScreen({ navigation }) {
   const { colors } = useTheme();
   const [activeFilter, setActiveFilter] = useState('全部');
   const [tasks, setTasks] = useState([]);
+  const [autoStatus, setAutoStatus] = useState({}); // taskId → 'running' | 'stopped'
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async (filter) => {
     setLoading(true);
     try {
-      const data = await getTasks(filter);
+      const [data, statusRes] = await Promise.all([
+        getTasks(filter),
+        fetch(`${API_BASE_URL}/trading/auto/status`).then(r => r.ok ? r.json() : []).catch(() => []),
+      ]);
       setTasks(data);
+      const statusMap = {};
+      statusRes.forEach(s => { statusMap[s.id] = s.status; });
+      setAutoStatus(statusMap);
     } catch (e) {
       console.error('Failed to fetch tasks:', e);
     } finally {
@@ -41,6 +49,37 @@ export default function TasksScreen({ navigation }) {
   useEffect(() => {
     fetchData(activeFilter);
   }, [activeFilter, fetchData]);
+
+  // Re-fetch when screen comes back into focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchData(activeFilter);
+    });
+    return unsubscribe;
+  }, [navigation, activeFilter, fetchData]);
+
+  const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
+
+  const handleToggleRun = async (taskId) => {
+    const isRunning = autoStatus[taskId] === 'running';
+    try {
+      if (isRunning) {
+        await fetch(`${API_BASE_URL}/trading/auto/stop`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId }),
+        });
+        setAutoStatus(prev => ({ ...prev, [taskId]: 'stopped' }));
+      } else {
+        await fetch(`${API_BASE_URL}/trading/auto/start`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ taskId, teamId: taskTeamMap[taskId] || 'team-btc', autoExecute: true, quoteAmount: 500 }),
+        });
+        setAutoStatus(prev => ({ ...prev, [taskId]: 'running' }));
+      }
+    } catch (e) {
+      console.error('Toggle run failed:', e);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -108,7 +147,7 @@ export default function TasksScreen({ navigation }) {
                   <View
                     style={[
                       styles.statusDot,
-                      { backgroundColor: task.statusColor },
+                      { backgroundColor: autoStatus[task.id] === 'running' ? '#34C759' : task.statusColor },
                     ]}
                   />
                   <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -116,13 +155,21 @@ export default function TasksScreen({ navigation }) {
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
-                  <TouchableOpacity style={[styles.runBtn, { backgroundColor: colors.primary }]}>
-                    <Play size={12} color="#FFFFFF" fill="#FFFFFF" />
-                    <Text style={styles.runBtnText}>运行</Text>
-                  </TouchableOpacity>
-                  {task.status === 'active' && (
-                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.divider }]}>
-                      <Pause size={14} color={colors.textSecondary} />
+                  {autoStatus[task.id] === 'running' ? (
+                    <TouchableOpacity
+                      style={[styles.runBtn, { backgroundColor: '#FF9500' }]}
+                      onPress={(e) => { e.stopPropagation(); handleToggleRun(task.id); }}
+                    >
+                      <Pause size={12} color="#FFFFFF" />
+                      <Text style={styles.runBtnText}>暂停</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.runBtn, { backgroundColor: colors.primary }]}
+                      onPress={(e) => { e.stopPropagation(); handleToggleRun(task.id); }}
+                    >
+                      <Play size={12} color="#FFFFFF" fill="#FFFFFF" />
+                      <Text style={styles.runBtnText}>运行</Text>
                     </TouchableOpacity>
                   )}
                   {task.status === 'draft' && (
