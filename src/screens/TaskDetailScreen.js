@@ -97,6 +97,7 @@ export default function TaskDetailScreen({ navigation, route }) {
       });
       if (!res.ok) throw new Error(`Server ${res.status}`);
       setStatus('running');
+      setConfigEditing(false);
       startPolling();
     } catch (e) { setError(e.message); }
   };
@@ -211,16 +212,21 @@ export default function TaskDetailScreen({ navigation, route }) {
         <CfgField label="执行阈值 (confidence%)" value={config.confidenceThreshold} editing={configEditing} onChange={v => updateConfig('confidenceThreshold', v)} colors={colors} keyboard="numeric" />
         <CfgField label="最大持仓" value={config.maxPositions} editing={configEditing} onChange={v => updateConfig('maxPositions', v)} colors={colors} keyboard="numeric" last />
       </View>
-      <TouchableOpacity
-        style={[styles.editConfigBtn, { backgroundColor: configEditing ? colors.primary : colors.card, borderColor: colors.cardBorder }]}
-        onPress={() => setConfigEditing(!configEditing)}
-        activeOpacity={0.8}
-      >
-        <Pencil size={16} color={configEditing ? '#FFF' : colors.primary} />
-        <Text style={[styles.editConfigText, { color: configEditing ? '#FFF' : colors.primary }]}>
-          {configEditing ? '保存配置' : '编辑配置'}
-        </Text>
-      </TouchableOpacity>
+      {status !== 'running' && (
+        <TouchableOpacity
+          style={[styles.editConfigBtn, { backgroundColor: configEditing ? colors.primary : colors.card, borderColor: colors.cardBorder }]}
+          onPress={() => setConfigEditing(!configEditing)}
+          activeOpacity={0.8}
+        >
+          <Pencil size={16} color={configEditing ? '#FFF' : colors.primary} />
+          <Text style={[styles.editConfigText, { color: configEditing ? '#FFF' : colors.primary }]}>
+            {configEditing ? '保存配置' : '编辑配置'}
+          </Text>
+        </TouchableOpacity>
+      )}
+      {status === 'running' && (
+        <Text style={[styles.configHint, { color: colors.textMuted }]}>暂停后可修改配置</Text>
+      )}
     </View>
   );
 
@@ -384,6 +390,7 @@ const styles = StyleSheet.create({
     height: 44, borderRadius: 12, borderWidth: 1, gap: 8,
   },
   editConfigText: { fontSize: 14, fontWeight: '600' },
+  configHint: { fontSize: 13, textAlign: 'center', paddingTop: 4 },
 
   // Banners
   errorBar: { paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#FEECEB' },
