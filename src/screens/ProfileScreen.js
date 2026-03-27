@@ -33,15 +33,11 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
         const res = await fetch(`${API_BASE_URL}/trading/portfolio`);
         if (res.ok) {
           setPortfolio(await res.json());
+        } else {
+          setPortfolio({ balance: 0, usdt: 0, positionCount: 0, connected: false });
         }
       } catch (e) {
-        // Fallback mock
-        setPortfolio({
-          balance: 10000,
-          totalPnl: 0,
-          totalPnlPct: 0,
-          positionCount: 0,
-        });
+        setPortfolio({ balance: 0, usdt: 0, positionCount: 0, connected: false });
       } finally {
         setLoading(false);
       }
@@ -83,28 +79,30 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
 
         {/* Portfolio Card */}
         <View style={[styles.portfolioCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.portfolioLabel, { color: colors.textSecondary }]}>模拟交易账户</Text>
+          <Text style={[styles.portfolioLabel, { color: colors.textSecondary }]}>
+            {portfolio?.connected ? 'Binance 交易账户' : '交易账户（未连接）'}
+          </Text>
           <Text style={[styles.portfolioBalance, { color: colors.textPrimary }]}>
-            ${(portfolio?.balance || 10000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ${(portfolio?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
           <View style={styles.portfolioStats}>
             <View style={styles.portfolioStat}>
-              <Text style={[styles.statValue, { color: pnlColor }]}>
-                {(portfolio?.totalPnl || 0) >= 0 ? '+' : ''}${Math.abs(portfolio?.totalPnl || 0).toFixed(2)}
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                ${(portfolio?.usdt || 0).toFixed(2)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>总盈亏</Text>
-            </View>
-            <View style={styles.portfolioStat}>
-              <Text style={[styles.statValue, { color: pnlColor }]}>
-                {(portfolio?.totalPnlPct || 0) >= 0 ? '+' : ''}{(portfolio?.totalPnlPct || 0).toFixed(2)}%
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>收益率</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>USDT</Text>
             </View>
             <View style={styles.portfolioStat}>
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>
                 {portfolio?.positionCount || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>持仓数</Text>
+            </View>
+            <View style={styles.portfolioStat}>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>
+                {portfolio?.tradeCount || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>交易数</Text>
             </View>
           </View>
         </View>
