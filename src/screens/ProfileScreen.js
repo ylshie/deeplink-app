@@ -22,7 +22,7 @@ import {
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, session, onLogout }) {
   const { colors, isDark, mode, setMode } = useTheme();
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -72,11 +72,11 @@ export default function ProfileScreen({ navigation }) {
         {/* Profile Card */}
         <TouchableOpacity style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>E</Text>
+            <Text style={styles.profileAvatarText}>{(session?.email || 'U')[0].toUpperCase()}</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.textPrimary }]}>Eric</Text>
-            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>eric@deeplink.ai</Text>
+            <Text style={[styles.profileName, { color: colors.textPrimary }]}>{session?.email?.split('@')[0] || 'User'}</Text>
+            <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{session?.email || ''}</Text>
           </View>
           <ChevronRight size={18} color={colors.textMuted} />
         </TouchableOpacity>
@@ -145,7 +145,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
             <View style={styles.menuLeft}>
               <LogOut size={20} color="#F54A45" />
               <Text style={[styles.menuLabel, { color: '#F54A45' }]}>退出登录</Text>
