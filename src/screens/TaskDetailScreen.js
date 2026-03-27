@@ -170,7 +170,13 @@ export default function TaskDetailScreen({ navigation, route }) {
   const renderHistory = () => (
     <>
       {signals.map((sig) => (
-        <SignalCard key={sig.id} sig={sig} showFooter={true} />
+        <TouchableOpacity
+          key={sig.id}
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('DebateDetail', { signal: sig })}
+        >
+          <SignalCard sig={sig} showFooter={true} />
+        </TouchableOpacity>
       ))}
       {signals.length === 0 && (
         <View style={styles.emptyWrap}>
