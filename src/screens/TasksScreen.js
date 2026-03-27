@@ -15,6 +15,7 @@ import {
   Pause,
   Pencil,
   Check,
+  Trash2,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getTasks, deleteTask } from '../api';
@@ -239,6 +240,17 @@ export default function TasksScreen({ navigation }) {
                   </Text>
                 )}
               </View>
+
+              {/* Delete button for user-created tasks */}
+              {!task.builtin && (
+                <TouchableOpacity
+                  style={[styles.deleteRow, { borderTopColor: colors.divider }]}
+                  onPress={() => handleDeleteTask(task)}
+                >
+                  <Trash2 size={14} color="#F54A45" />
+                  <Text style={styles.deleteText}>删除任务</Text>
+                </TouchableOpacity>
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -367,5 +379,19 @@ const styles = StyleSheet.create({
   infoResult: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  deleteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingTop: 12,
+    marginTop: 4,
+    borderTopWidth: 1,
+  },
+  deleteText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#F54A45',
   },
 });

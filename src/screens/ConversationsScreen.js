@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Search, SquarePen } from 'lucide-react-native';
+import { Search, SquarePen, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents, getTeams, deleteAgent, deleteTeam } from '../api';
 import { getIcon } from '../components/IconMap';
@@ -120,6 +120,11 @@ export default function ConversationsScreen({ navigation }) {
             </Text>
           )}
         </View>
+        {!item.builtin && (
+          <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+            <Trash2 size={16} color="#F54A45" />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
@@ -303,5 +308,9 @@ const styles = StyleSheet.create({
     height: 1,
     marginLeft: 82,
     marginRight: 20,
+  },
+  deleteBtn: {
+    padding: 10,
+    marginLeft: -4,
   },
 });
