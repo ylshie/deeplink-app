@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { addTask } from '../api';
 
 const PLUGINS = [
   { id: 'coingecko', name: 'CoinGecko', icon: '🪙' },
@@ -42,12 +43,26 @@ export default function CreateTaskScreen({ navigation }) {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('请输入任务名称');
       return;
     }
-    // TODO: POST to server to create task
+    await addTask({
+      id: `task-${Date.now()}`,
+      name: name.trim(),
+      status: 'draft',
+      statusColor: '#AAAAAA',
+      group: TEAMS.find(t => t.id === selectedTeam)?.name || '',
+      schedule: `Every ${interval}m`,
+      teamId: selectedTeam,
+      pair,
+      intervalMin: interval,
+      quoteAmount: amount,
+      prompt,
+      plugins: selectedPlugins,
+      model: selectedModel,
+    });
     Alert.alert('已创建', `任务「${name}」已创建`, [
       { text: '确定', onPress: () => navigation.goBack() },
     ]);
