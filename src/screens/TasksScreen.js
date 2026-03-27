@@ -149,29 +149,31 @@ export default function TasksScreen({ navigation }) {
             const isRunning = autoStatus[task.id] === 'running';
             const canDelete = !task.builtin && !isRunning;
             return (
-              <TouchableOpacity
+              <View
                 key={task.id}
                 style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
-                activeOpacity={0.7}
-                onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}
               >
-                {/* Card Header */}
-                <View style={styles.cardHeader}>
-                  <View style={styles.cardLeft}>
-                    <View style={[styles.statusDot, { backgroundColor: isRunning ? '#34C759' : task.statusColor }]} />
-                    <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>{task.name}</Text>
+                {/* Tappable card body → navigate to detail */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.cardBody}
+                  onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardLeft}>
+                      <View style={[styles.statusDot, { backgroundColor: isRunning ? '#34C759' : task.statusColor }]} />
+                      <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>{task.name}</Text>
+                    </View>
                   </View>
-                </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>{task.group} · {task.schedule}</Text>
+                  </View>
+                </TouchableOpacity>
 
-                {/* Card Info */}
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.infoText, { color: colors.textSecondary }]}>{task.group} · {task.schedule}</Text>
-                </View>
-
-                {/* Action buttons row */}
+                {/* Action buttons row — NOT inside the card touchable */}
                 <View style={[styles.cardActionRow, { borderTopColor: colors.divider }]}>
                   {isRunning ? (
-                    <TouchableOpacity style={[styles.cardActionItem]} onPress={() => handleToggleRun(task.id)}>
+                    <TouchableOpacity style={styles.cardActionItem} onPress={() => handleToggleRun(task.id)}>
                       <Pause size={14} color="#FF9500" />
                       <Text style={[styles.cardActionLabel, { color: '#FF9500' }]}>暂停</Text>
                     </TouchableOpacity>
@@ -192,7 +194,7 @@ export default function TasksScreen({ navigation }) {
                     </TouchableOpacity>
                   )}
                 </View>
-              </TouchableOpacity>
+              </View>
             );
           })}
         </ScrollView>
@@ -260,8 +262,12 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 16,
-    padding: 20,
     borderWidth: 1,
+    overflow: 'hidden',
+  },
+  cardBody: {
+    padding: 20,
+    paddingBottom: 14,
     gap: 14,
   },
   cardHeader: {
