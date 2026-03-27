@@ -145,114 +145,56 @@ export default function TasksScreen({ navigation }) {
           contentContainerStyle={styles.cardList}
           showsVerticalScrollIndicator={false}
         >
-          {tasks.map((task) => (
-            <View key={task.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() =>
-                navigation.navigate('TaskDetail', {
-                  id: task.id,
-                  name: task.name,
-                })
-              }
-            >
-              {/* Card Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.cardLeft}>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      { backgroundColor: autoStatus[task.id] === 'running' ? '#34C759' : task.statusColor },
-                    ]}
-                  />
-                  <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>
-                    {task.name}
-                  </Text>
+          {tasks.map((task) => {
+            const isRunning = autoStatus[task.id] === 'running';
+            const canDelete = !task.builtin && !isRunning;
+            return (
+              <TouchableOpacity
+                key={task.id}
+                style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}
+              >
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.cardLeft}>
+                    <View style={[styles.statusDot, { backgroundColor: isRunning ? '#34C759' : task.statusColor }]} />
+                    <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>{task.name}</Text>
+                  </View>
                 </View>
-                <View style={styles.cardActions}>
-                  {autoStatus[task.id] === 'running' ? (
-                    <TouchableOpacity
-                      style={[styles.runBtn, { backgroundColor: '#FF9500' }]}
-                      onPress={(e) => { e.stopPropagation(); handleToggleRun(task.id); }}
-                    >
-                      <Pause size={12} color="#FFFFFF" />
-                      <Text style={styles.runBtnText}>暂停</Text>
+
+                {/* Card Info */}
+                <View style={styles.cardInfo}>
+                  <Text style={[styles.infoText, { color: colors.textSecondary }]}>{task.group} · {task.schedule}</Text>
+                </View>
+
+                {/* Action buttons row */}
+                <View style={[styles.cardActionRow, { borderTopColor: colors.divider }]}>
+                  {isRunning ? (
+                    <TouchableOpacity style={[styles.cardActionItem]} onPress={() => handleToggleRun(task.id)}>
+                      <Pause size={14} color="#FF9500" />
+                      <Text style={[styles.cardActionLabel, { color: '#FF9500' }]}>暂停</Text>
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity
-                      style={[styles.runBtn, { backgroundColor: colors.primary }]}
-                      onPress={(e) => { e.stopPropagation(); handleToggleRun(task.id); }}
-                    >
-                      <Play size={12} color="#FFFFFF" fill="#FFFFFF" />
-                      <Text style={styles.runBtnText}>运行</Text>
+                    <TouchableOpacity style={styles.cardActionItem} onPress={() => handleToggleRun(task.id)}>
+                      <Play size={14} color={colors.primary} fill={colors.primary} />
+                      <Text style={[styles.cardActionLabel, { color: colors.primary }]}>运行</Text>
                     </TouchableOpacity>
                   )}
-                  {task.status === 'draft' && (
-                    <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.divider }]}>
-                      <Pencil size={14} color={colors.textSecondary} />
+                  <TouchableOpacity style={styles.cardActionItem} onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}>
+                    <Pencil size={14} color={colors.textSecondary} />
+                    <Text style={[styles.cardActionLabel, { color: colors.textSecondary }]}>编辑</Text>
+                  </TouchableOpacity>
+                  {canDelete && (
+                    <TouchableOpacity style={styles.cardActionItem} onPress={() => handleDeleteTask(task)}>
+                      <Trash2 size={14} color="#F54A45" />
+                      <Text style={[styles.cardActionLabel, { color: '#F54A45' }]}>删除</Text>
                     </TouchableOpacity>
                   )}
                 </View>
-              </View>
-
-              {/* Card Info */}
-              <View style={styles.cardInfo}>
-                <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                  {task.group} · {task.schedule}
-                </Text>
-                {!task.neverRun && (
-                  <>
-                    <View style={styles.infoRow}>
-                      <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                        Last: {task.lastTime} →{' '}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.infoResult,
-                          { color: task.lastResultColor },
-                        ]}
-                      >
-                        {task.lastResult}
-                      </Text>
-                      {task.showCheck && (
-                        <Check
-                          size={14}
-                          color="#34C759"
-                          style={{ marginLeft: 4 }}
-                        />
-                      )}
-                    </View>
-                    {task.nextRun && (
-                      <Text style={[styles.infoText, { color: colors.textSecondary }]}>Next: {task.nextRun}</Text>
-                    )}
-                    {task.pausedSince && (
-                      <Text style={[styles.infoText, { color: '#FF9500' }]}>
-                        Paused since: {task.pausedSince}
-                      </Text>
-                    )}
-                  </>
-                )}
-                {task.neverRun && (
-                  <Text style={[styles.infoText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
-                    Never run
-                  </Text>
-                )}
-              </View>
-
-            </TouchableOpacity>
-
-              {/* Delete button for user-created tasks */}
-              {!task.builtin && (
-                <TouchableOpacity
-                  style={[styles.deleteRow, { borderTopColor: colors.divider }]}
-                  onPress={() => handleDeleteTask(task)}
-                >
-                  <Trash2 size={14} color="#F54A45" />
-                  <Text style={styles.deleteText}>删除任务</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       )}
     </View>
@@ -356,42 +298,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
-  runBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  actionBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
   cardInfo: {
     gap: 6,
   },
   infoText: {
     fontSize: 13,
   },
-  infoRow: {
+  cardActionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    borderTopWidth: 1,
+    marginTop: 4,
+    paddingTop: 10,
   },
-  infoResult: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  deleteRow: {
+  cardActionItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingTop: 12,
-    marginTop: 4,
-    borderTopWidth: 1,
+    paddingVertical: 4,
   },
-  deleteText: {
+  cardActionLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#F54A45',
   },
 });
