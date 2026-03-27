@@ -184,11 +184,66 @@ export default function TaskDetailScreen({ navigation, route }) {
 
   const renderTrades = () => {
     const executed = signals.filter(isTradeExecution);
+    // Calculate stats
+    const totalPnl = executed.reduce((s, t) => s + (t.pnl || 0), 0);
+    const wins = executed.filter(t => (t.pnl || 0) > 0).length;
+    const winRate = executed.length > 0 ? ((wins / executed.length) * 100).toFixed(1) : '0.0';
+    const pnlColor = totalPnl >= 0 ? '#34C759' : '#F54A45';
+
     return (
       <>
-        {executed.map((sig) => (
-          <SignalCard key={sig.id + '-t'} sig={sig} showFooter={true} />
-        ))}
+        {/* Summary stats card */}
+        {executed.length > 0 && (
+          <View style={styles.tradesSummary}>
+            <View style={styles.tradesStat}>
+              <Text style={[styles.tradesStatVal, { color: pnlColor }]}>
+                {totalPnl >= 0 ? '+' : ''}${Math.abs(totalPnl).toFixed(2)}
+              </Text>
+              <Text style={styles.tradesStatLabel}>总盈亏</Text>
+            </View>
+            <View style={styles.tradesStat}>
+              <Text style={styles.tradesStatValDark}>{winRate}%</Text>
+              <Text style={styles.tradesStatLabel}>胜率</Text>
+            </View>
+            <View style={styles.tradesStat}>
+              <Text style={styles.tradesStatValDark}>{executed.length}</Text>
+              <Text style={styles.tradesStatLabel}>总交易</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Trade rows */}
+        {executed.map((sig) => {
+          const badge = getBadge(sig.action);
+          const sigPnl = sig.pnl || 0;
+          const sigPnlPct = sig.pnlPct || 0;
+          const sigPnlColor = sigPnl >= 0 ? '#34C759' : '#F54A45';
+          return (
+            <TouchableOpacity
+              key={sig.id + '-t'}
+              style={styles.tradeRow}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('TradeDetail', { trade: sig })}
+            >
+              <View style={[styles.tradeRowBadge, { backgroundColor: badge.bg }]}>
+                <Text style={[styles.tradeRowBadgeText, { color: badge.color }]}>{sig.action}</Text>
+              </View>
+              <View style={styles.tradeRowMid}>
+                <Text style={styles.tradeRowPair}>{sig.pair || 'BTC/USDT'}</Text>
+                <Text style={styles.tradeRowTime}>{sig.time} · 置信度 {sig.confidence}%</Text>
+              </View>
+              <View style={styles.tradeRowRight}>
+                <Text style={[styles.tradeRowPnl, { color: sigPnlColor }]}>
+                  {sigPnl >= 0 ? '+' : ''}${Math.abs(sigPnl).toFixed(2)}
+                </Text>
+                <Text style={[styles.tradeRowPct, { color: sigPnlColor }]}>
+                  {sigPnlPct >= 0 ? '+' : ''}{sigPnlPct.toFixed(2)}%
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
         {executed.length === 0 && (
           <View style={styles.emptyWrap}>
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -384,6 +439,29 @@ const styles = StyleSheet.create({
   },
   signalTrade: { fontSize: 12, fontWeight: '500' },
   signalTokens: { fontSize: 11, color: '#8F959E' },
+
+  // Trades tab
+  tradesSummary: {
+    flexDirection: 'row', backgroundColor: '#F5F7FA', borderRadius: 16,
+    borderWidth: 1, borderColor: '#E5E8ED', paddingVertical: 16,
+  },
+  tradesStat: { flex: 1, alignItems: 'center', gap: 4 },
+  tradesStatVal: { fontSize: 18, fontWeight: '700' },
+  tradesStatValDark: { fontSize: 18, fontWeight: '700', color: '#1F2329' },
+  tradesStatLabel: { fontSize: 11, color: '#8F959E' },
+  tradeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#F5F7FA', borderRadius: 16, padding: 14, paddingHorizontal: 16,
+    borderWidth: 1, borderColor: '#E5E8ED',
+  },
+  tradeRowBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  tradeRowBadgeText: { fontSize: 11, fontWeight: '700' },
+  tradeRowMid: { flex: 1, gap: 2 },
+  tradeRowPair: { fontSize: 14, fontWeight: '600', color: '#1F2329' },
+  tradeRowTime: { fontSize: 12, color: '#8F959E' },
+  tradeRowRight: { alignItems: 'flex-end', gap: 2 },
+  tradeRowPnl: { fontSize: 14, fontWeight: '600' },
+  tradeRowPct: { fontSize: 12 },
 
   configCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   editConfigBtn: {

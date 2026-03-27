@@ -13,6 +13,7 @@ import CreateTaskScreen from '../screens/CreateTaskScreen';
 import ApiKeysScreen from '../screens/ApiKeysScreen';
 import NotificationScreen from '../screens/NotificationScreen';
 import LanguageScreen from '../screens/LanguageScreen';
+import TradeDetailScreen from '../screens/TradeDetailScreen';
 import CustomTabBar from '../components/CustomTabBar';
 
 const Tab = createBottomTabNavigator();
@@ -47,6 +48,7 @@ export default function AppNavigator({ session, onLogout }) {
       <Stack.Screen name="ApiKeys" component={ApiKeysScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Notifications" component={NotificationScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="Language" component={LanguageScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="TradeDetail" component={TradeDetailScreen} options={{ animation: 'slide_from_right' }} />
     </Stack.Navigator>
   );
 }
