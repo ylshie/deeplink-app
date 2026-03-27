@@ -1,62 +1,54 @@
-// Tasks — local state with one built-in task.
-// User-created tasks stored in memory (lost on app restart for now).
-
+// Tasks — stored on server per user account.
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { fetchApi } from './config';
 
-const STORAGE_KEY = '@deeplink_tasks';
+const SESSION_KEY = '@deeplink_session';
 
-const BUILTIN_TASKS = [
-  {
-    id: 'task-1',
-    name: 'BTC 15min Debate',
-    status: 'active',
-    statusColor: '#34C759',
-    group: 'BTC 多维分析群',
-    schedule: 'Every 15m',
-    teamId: 'team-btc',
-    builtin: true,
-  },
-];
-
-let userTasks = null; // lazy loaded
-
-async function loadUserTasks() {
-  if (userTasks !== null) return;
+async function getSessionToken() {
   try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    userTasks = stored ? JSON.parse(stored) : [];
-  } catch {
-    userTasks = [];
-  }
-}
-
-async function saveUserTasks() {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userTasks));
+    const stored = await AsyncStorage.getItem(SESSION_KEY);
+    if (stored) return JSON.parse(stored).token;
+  } catch { /* */ }
+  return null;
 }
 
 export async function getTasks(statusFilter) {
-  await loadUserTasks();
-  let list = [...BUILTIN_TASKS, ...userTasks];
-  if (statusFilter && statusFilter !== '全部') {
-    const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
-    list = list.filter((t) => t.status === map[statusFilter]);
+  const token = await getSessionToken();
+  if (!token) return [];
+
+  try {
+    const list = await fetchApi('/user/tasks', {
+      headers: { 'x-session-token': token },
+    });
+    if (statusFilter && statusFilter !== '全部') {
+      const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
+      return list.filter((t) => t.status === map[statusFilter]);
+    }
+    return list;
+  } catch {
+    return [];
   }
-  return list;
 }
 
 export async function addTask(task) {
-  await loadUserTasks();
-  userTasks.push({ ...task, builtin: false });
-  await saveUserTasks();
+  const token = await getSessionToken();
+  if (!token) return;
+
+  await fetchApi('/user/tasks', {
+    method: 'POST',
+    headers: { 'x-session-token': token },
+    body: JSON.stringify({ task }),
+  });
 }
 
 export async function deleteTask(taskId) {
-  await loadUserTasks();
-  const task = [...BUILTIN_TASKS, ...userTasks].find(t => t.id === taskId);
-  if (task?.builtin) return { success: false, error: '内置任务不可删除' };
-  userTasks = userTasks.filter(t => t.id !== taskId);
-  await saveUserTasks();
-  return { success: true };
+  const token = await getSessionToken();
+  if (!token) return { success: false };
+
+  return fetchApi(`/user/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: { 'x-session-token': token },
+  });
 }
 
 export async function getTaskRuns(taskId) {

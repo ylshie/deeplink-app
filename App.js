@@ -31,20 +31,7 @@ function AppInner() {
           const data = await res.json();
           if (data.valid) {
             setSession(parsed);
-            // Restore Binance credential to server if exists
-            try {
-              const cred = await AsyncStorage.getItem('@deeplink_binance_credentials');
-              if (cred) {
-                const { token: binanceToken } = JSON.parse(cred);
-                if (binanceToken) {
-                  await fetch(`${API_BASE_URL}/credentials/connect`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: binanceToken }),
-                  });
-                }
-              }
-            } catch { /* */ }
+            // Server restores binance token from user data automatically on auth/check
           } else {
             await AsyncStorage.removeItem(SESSION_KEY);
           }

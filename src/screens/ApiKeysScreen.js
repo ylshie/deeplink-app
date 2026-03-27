@@ -15,6 +15,7 @@ import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
 
 const STORAGE_KEY = '@deeplink_binance_credentials';
+const SESSION_KEY = '@deeplink_session';
 
 export default function ApiKeysScreen({ navigation }) {
   const { colors } = useTheme();
@@ -70,6 +71,20 @@ export default function ApiKeysScreen({ navigation }) {
       };
 
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(credential));
+
+      // Also save to server (per-user, so other devices can see)
+      try {
+        const sess = await AsyncStorage.getItem(SESSION_KEY);
+        if (sess) {
+          const { token: sessToken } = JSON.parse(sess);
+          await fetch(`${API_BASE_URL}/user/binance/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
+            body: JSON.stringify({ token: result.token }),
+          });
+        }
+      } catch { /* */ }
+
       setSavedKey(credential);
       setAdding(false);
       setNewKey('');

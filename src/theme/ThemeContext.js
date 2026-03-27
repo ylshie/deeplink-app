@@ -2,41 +2,50 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { lightColors, darkColors } from './colors';
+import { getSettings, updateSettings } from '../api/settings';
 
 const STORAGE_KEY = '@deeplink_theme_mode';
 
-/**
- * Theme mode:
- *   'system' — follow OS setting
- *   'light'  — force light
- *   'dark'   — force dark
- */
 const ThemeContext = createContext({
   colors: lightColors,
   isDark: false,
-  mode: 'system',        // 'system' | 'light' | 'dark'
+  mode: 'system',
   setMode: () => {},
 });
 
 export function ThemeProvider({ children }) {
-  const systemScheme = useColorScheme(); // 'light' | 'dark' | null
+  const systemScheme = useColorScheme();
   const [mode, setModeState] = useState('system');
   const [loaded, setLoaded] = useState(false);
 
-  // Load saved preference on mount
+  // Load: try server settings first, fall back to local
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((saved) => {
-      if (saved === 'light' || saved === 'dark' || saved === 'system') {
-        setModeState(saved);
-      }
+    (async () => {
+      try {
+        const serverSettings = await getSettings();
+        if (serverSettings?.theme) {
+          setModeState(serverSettings.theme);
+          setLoaded(true);
+          return;
+        }
+      } catch { /* */ }
+
+      // Fallback to local
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved === 'light' || saved === 'dark' || saved === 'system') {
+          setModeState(saved);
+        }
+      } catch { /* */ }
       setLoaded(true);
-    });
+    })();
   }, []);
 
-  // Persist when mode changes
   const setMode = (newMode) => {
     setModeState(newMode);
+    // Save both locally (immediate) and to server (async)
     AsyncStorage.setItem(STORAGE_KEY, newMode);
+    updateSettings({ theme: newMode }).catch(() => {});
   };
 
   const isDark = useMemo(() => {
@@ -51,7 +60,6 @@ export function ThemeProvider({ children }) {
     [colors, isDark, mode],
   );
 
-  // Don't render children until saved pref is loaded (avoids flash)
   if (!loaded) return null;
 
   return (
