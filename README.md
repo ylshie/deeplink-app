@@ -9,12 +9,12 @@
 ```
 React Native App ──HTTP──▸ Express Server ──API──▸ OpenAI (ChatGPT)
      │                          │                       │
-  11 screens                Agent 角色定义          Tool Calling
+  12 screens                Agent 角色定义          Tool Calling
   3 bottom tabs             Team 辩论流程               │
   pill-style tab bar        自动交易引擎          ┌─────┴─────┐
   light/dark theme          模拟交易组合          │  Market    │
-                                                  │  Data      │
-                                                  │  (定期抓取) │
+  email login               Binance 密钥管理      │  Data      │
+                            Resend 邮件验证       │  (定期抓取) │
                                                   └───────────┘
 ```
 
@@ -31,6 +31,8 @@ React Native App ──HTTP──▸ Express Server ──API──▸ OpenAI (C
 ### 完整导航流程
 
 ```
+LoginScreen（邮箱验证码登录）
+  ↓ 验证通过
 对话 tab
   ├── Agent filter → 点击 → AgentChatScreen（一对一聊天）
   └── Teams filter → 点击 → TeamChatScreen（多 Agent 辩论）
@@ -42,10 +44,11 @@ React Native App ──HTTP──▸ Express Server ──API──▸ OpenAI (C
   └── 右上角 ＋ → CreateTaskScreen（创建新任务）
 
 我的 tab
-  ├── API 密钥管理 → ApiKeysScreen（Binance 密钥增删）
+  ├── API 密钥管理 → ApiKeysScreen（Binance 真实密钥连接）
   ├── 通知设置 → NotificationScreen（5 项推送开关）
   ├── 语言 → LanguageScreen（简体/繁体/English）
-  └── 外观模式 → 内嵌 toggle（跟随系统/浅色/深色）
+  ├── 外观模式 → 内嵌 toggle（跟随系统/浅色/深色）
+  └── 退出登录 → 清除 session，回到 LoginScreen
 ```
 
 ### 两种聊天模式
@@ -101,6 +104,46 @@ React Native App ──HTTP──▸ Express Server ──API──▸ OpenAI (C
 - Dark 色系取自 `.pen` 设计变量（`#131124` 背景、`#5749F4` 主色）
 - 选择持久化到 AsyncStorage
 
+### 登录认证
+
+邮箱验证码登录，无需密码：
+
+```
+打开 App → LoginScreen
+  → 输入邮箱 → 「获取验证码」
+  → Server POST /api/auth/send-code
+  → Resend API 发送含 6 位验证码的邮件
+  → 用户输入验证码 → 「登录」
+  → Server POST /api/auth/verify → 返回 session token
+  → Token 存入 AsyncStorage，30 天有效
+  → 进入主 App
+```
+
+- 验证码 5 分钟内有效，60 秒冷却后可重发
+- 重启 App 自动检查 session 是否有效（`POST /api/auth/check`）
+- 退出登录清除 server session + 本地 token
+
+### Binance API 密钥
+
+真实连接 Binance 账户，密钥全程加密：
+
+```
+我的 → API 密钥管理 → 连接 Binance 账户
+  → 输入 API Key + Secret Key
+  → 「验证并连接」
+  → Server 用 CCXT 连接 Binance fetchBalance() 验证
+  → 成功: AES-256-GCM 加密密钥 → 返回 encrypted token
+  → App 存 token 到 AsyncStorage（原始密钥不保留）
+  → 查看余额: token 发给 server → 解密 → 实时查询 Binance
+```
+
+| 层 | 安全措施 |
+|---|---|
+| App 端 | 只存 encrypted token，不存原始 key |
+| 传输 | HTTPS 加密传输 |
+| Server 端 | 不持久化任何密钥，仅在内存中解密使用（5 分钟 cache） |
+| 加密 | AES-256-GCM，key 由 `ENCRYPTION_KEY` 环境变量派生 |
+
 ## Tool Calling（类 MCP 机制）
 
 Agent 通过 OpenAI function calling 机制调用数据工具，类似 MCP（Model Context Protocol）的 tool 调用模式。每个 Agent 只能访问与其角色相关的工具子集。
@@ -149,6 +192,22 @@ Agent 通过 OpenAI function calling 机制调用数据工具，类似 MCP（Mod
 | `GET` | `/api/teams/:id/messages` | 获取分析群聊天历史（含 agents 列表） |
 | `POST` | `/api/teams/:id/chat` | 发起多 Agent 辩论（含 tool calling） |
 
+### Auth
+
+| Method | Path | 说明 |
+|--------|------|------|
+| `POST` | `/api/auth/send-code` | 发送 6 位验证码到邮箱（via Resend API） |
+| `POST` | `/api/auth/verify` | 验证码校验，返回 session token |
+| `POST` | `/api/auth/check` | 检查 session token 是否有效 |
+| `POST` | `/api/auth/logout` | 注销 session |
+
+### Credentials
+
+| Method | Path | 说明 |
+|--------|------|------|
+| `POST` | `/api/credentials/validate` | 验证 Binance API 密钥，返回加密 token |
+| `POST` | `/api/credentials/balance` | 用加密 token 查询真实 Binance 余额 |
+
 ### Trading
 
 | Method | Path | 说明 |
@@ -167,7 +226,7 @@ Agent 通过 OpenAI function calling 机制调用数据工具，类似 MCP（Mod
 
 ```
 deeplink-app/
-├── App.js                              # 入口：ThemeProvider + SafeArea + Navigation
+├── App.js                              # 入口：ThemeProvider + Auth gate + Navigation
 ├── metro.config.js                     # Metro 配置
 ├── eas.json                            # EAS Build 配置
 ├── src/
@@ -181,7 +240,7 @@ deeplink-app/
 │   │   ├── CustomTabBar.js             #   药丸形底部 Tab Bar（动态主题）
 │   │   └── IconMap.js                  #   icon name → Lucide component 映射
 │   ├── navigation/
-│   │   └── AppNavigator.js             #   Stack + Tab 导航（11 screens）
+│   │   └── AppNavigator.js             #   Stack + Tab 导航（12 screens）
 │   ├── screens/
 │   │   ├── ConversationsScreen.js      #   对话列表（Agent / Teams filter）
 │   │   ├── AgentChatScreen.js          #   Agent 一对一聊天 + KeyboardAvoidingView
@@ -193,7 +252,8 @@ deeplink-app/
 │   │   ├── ProfileScreen.js            #   我的（模拟账户 + 菜单）
 │   │   ├── ApiKeysScreen.js            #   Binance API 密钥管理（增删）
 │   │   ├── NotificationScreen.js       #   通知设置（5 项开关）
-│   │   └── LanguageScreen.js           #   语言切换（简体/繁体/English）
+│   │   ├── LanguageScreen.js           #   语言切换（简体/繁体/English）
+│   │   └── LoginScreen.js             #   邮箱验证码登录
 │   └── theme/
 │       ├── colors.js                   #   lightColors + darkColors
 │       ├── ThemeContext.js             #   ThemeProvider + useTheme()
@@ -207,7 +267,7 @@ deeplink-app/
 ```bash
 git clone https://github.com/ylshie/deeplink-server.git
 cd deeplink-server
-cp .env.example .env   # 填入 OPENAI_API_KEY
+cp .env.example .env   # 填入 OPENAI_API_KEY + RESEND_API_KEY
 npm install
 npm start              # http://localhost:3000
 ```
@@ -236,13 +296,16 @@ echo "sdk.dir=$HOME/Android/Sdk" > local.properties
 # APK 输出: android/app/build/outputs/apk/release/app-release.apk
 ```
 
-### 环境变量
+### 环境变量（Server .env）
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `OPENAI_API_KEY` | OpenAI API 密钥（必填） | — |
 | `OPENAI_MODEL` | 模型 | `gpt-4o` |
 | `PORT` | 服务端口 | `3000` |
+| `RESEND_API_KEY` | Resend 邮件 API 密钥（登录功能必填） | — |
+| `EMAIL_FROM` | 发件人地址 | `onboarding@resend.dev` |
+| `ENCRYPTION_KEY` | 密钥加密种子 | 内置默认值 |
 | `LOG_TOOL` | Tool call 日志 | `0` |
 | `LOG_FETCH` | Fetcher 日志 | `0` |
 | `LOG_ALL` | 全部日志 | `0` |
