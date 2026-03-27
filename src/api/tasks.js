@@ -12,22 +12,39 @@ async function getSessionToken() {
   return null;
 }
 
+const BUILTIN_TASKS = [
+  {
+    id: 'task-1',
+    name: 'BTC 15min Debate',
+    status: 'active',
+    statusColor: '#34C759',
+    group: 'BTC 多维分析群',
+    schedule: 'Every 15m',
+    teamId: 'team-btc',
+    builtin: true,
+  },
+];
+
 export async function getTasks(statusFilter) {
   const token = await getSessionToken();
-  if (!token) return [];
+  let list = BUILTIN_TASKS;
 
-  try {
-    const list = await fetchApi('/user/tasks', {
-      headers: { 'x-session-token': token },
-    });
-    if (statusFilter && statusFilter !== '全部') {
-      const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
-      return list.filter((t) => t.status === map[statusFilter]);
+  if (token) {
+    try {
+      list = await fetchApi('/user/tasks', {
+        headers: { 'x-session-token': token },
+      });
+    } catch {
+      // Server not available, use builtin fallback
+      list = BUILTIN_TASKS;
     }
-    return list;
-  } catch {
-    return [];
   }
+
+  if (statusFilter && statusFilter !== '全部') {
+    const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
+    return list.filter((t) => t.status === map[statusFilter]);
+  }
+  return list;
 }
 
 export async function addTask(task) {
