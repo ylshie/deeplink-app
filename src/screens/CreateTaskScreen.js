@@ -34,7 +34,7 @@ export default function CreateTaskScreen({ navigation }) {
   const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedTeam, setSelectedTeam] = useState('team-btc');
   const [pair, setPair] = useState('BTC/USDT');
-  const [interval, setInterval] = useState('15');
+  const [intervalMin, setIntervalMin] = useState('15');
   const [amount, setAmount] = useState('500');
 
   const togglePlugin = (id) => {
@@ -45,27 +45,29 @@ export default function CreateTaskScreen({ navigation }) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('请输入任务名称');
+      Alert.alert('提示', '请输入任务名称');
       return;
     }
-    await addTask({
-      id: `task-${Date.now()}`,
-      name: name.trim(),
-      status: 'draft',
-      statusColor: '#AAAAAA',
-      group: TEAMS.find(t => t.id === selectedTeam)?.name || '',
-      schedule: `Every ${interval}m`,
-      teamId: selectedTeam,
-      pair,
-      intervalMin: interval,
-      quoteAmount: amount,
-      prompt,
-      plugins: selectedPlugins,
-      model: selectedModel,
-    });
-    Alert.alert('已创建', `任务「${name}」已创建`, [
-      { text: '确定', onPress: () => navigation.goBack() },
-    ]);
+    try {
+      await addTask({
+        id: `task-${Date.now()}`,
+        name: name.trim(),
+        status: 'draft',
+        statusColor: '#AAAAAA',
+        group: TEAMS.find(t => t.id === selectedTeam)?.name || '',
+        schedule: `Every ${intervalMin}m`,
+        teamId: selectedTeam,
+        pair,
+        intervalMin,
+        quoteAmount: amount,
+        prompt,
+        plugins: selectedPlugins,
+        model: selectedModel,
+      });
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('错误', e.message || '创建失败');
+    }
   };
 
   return (
@@ -127,8 +129,8 @@ export default function CreateTaskScreen({ navigation }) {
               <Text style={[styles.fieldLabel, { color: '#646A73' }]}>间隔 (分钟)</Text>
               <TextInput
                 style={[styles.inputSmall, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-                value={interval}
-                onChangeText={setInterval}
+                value={intervalMin}
+                onChangeText={setIntervalMin}
                 keyboardType="numeric"
               />
             </View>
