@@ -22,7 +22,7 @@ import {
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { colors, isDark, mode, setMode } = useTheme();
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -111,11 +111,11 @@ export default function ProfileScreen() {
 
         {/* Menu Section */}
         <View style={[styles.menuSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <MenuItem icon={Key} label="API 密钥管理" colors={colors} />
+          <MenuItem icon={Key} label="API 密钥管理" colors={colors} onPress={() => navigation.navigate('ApiKeys')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
-          <MenuItem icon={Bell} label="通知设置" colors={colors} />
+          <MenuItem icon={Bell} label="通知设置" colors={colors} onPress={() => navigation.navigate('Notifications')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
-          <MenuItem icon={Languages} label="语言" value="中文" colors={colors} />
+          <MenuItem icon={Languages} label="语言" value="中文" colors={colors} onPress={() => navigation.navigate('Language')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
 
           {/* Theme Switcher inline */}

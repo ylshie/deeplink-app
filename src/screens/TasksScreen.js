@@ -91,7 +91,7 @@ export default function TasksScreen({ navigation }) {
           <TouchableOpacity>
             <Search size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.addBtn}>
+          <TouchableOpacity style={styles.addBtn} onPress={() => navigation.navigate('CreateTask')}>
             <Plus size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
