@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {
   Search,
@@ -16,7 +17,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import { getTasks } from '../api';
+import { getTasks, deleteTask } from '../api';
 import { API_BASE_URL } from '../api/config';
 
 const filters = ['全部', '运行中', '已暂停', '草稿'];
@@ -81,6 +82,20 @@ export default function TasksScreen({ navigation }) {
     }
   };
 
+  const handleDeleteTask = (task) => {
+    if (task.builtin) return;
+    Alert.alert('删除任务', `确认删除「${task.name}」？`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除', style: 'destructive',
+        onPress: async () => {
+          await deleteTask(task.id);
+          fetchData(activeFilter);
+        },
+      },
+    ]);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
 
@@ -140,6 +155,7 @@ export default function TasksScreen({ navigation }) {
                   name: task.name,
                 })
               }
+              onLongPress={() => handleDeleteTask(task)}
             >
               {/* Card Header */}
               <View style={styles.cardHeader}>

@@ -1,6 +1,11 @@
-// Tasks data — local mock until backend supports these endpoints.
+// Tasks — local state with one built-in task.
+// User-created tasks stored in memory (lost on app restart for now).
 
-const MOCK_TASKS = [
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = '@deeplink_tasks';
+
+const BUILTIN_TASKS = [
   {
     id: 'task-1',
     name: 'BTC 15min Debate',
@@ -8,82 +13,30 @@ const MOCK_TASKS = [
     statusColor: '#34C759',
     group: 'BTC 多维分析群',
     schedule: 'Every 15m',
-    lastTime: '14:15',
-    lastResult: 'BUY (82%)',
-    lastResultColor: '#34C759',
-    nextRun: '14:30',
-    showCheck: true,
-  },
-  {
-    id: 'task-2',
-    name: 'ETH Daily Morning Brief',
-    status: 'paused',
-    statusColor: '#FF9500',
-    group: 'ETH分析群',
-    schedule: 'Daily 09:00 (Paused)',
-    lastTime: '2026-02-28 09:00',
-    lastResult: 'HOLD',
-    lastResultColor: '#888888',
-    pausedSince: '2026-03-01',
-  },
-  {
-    id: 'task-3',
-    name: 'SOL Anomaly Detection',
-    status: 'draft',
-    statusColor: '#AAAAAA',
-    group: 'SOL分析群',
-    schedule: 'Every 5m (Draft)',
-    neverRun: true,
+    teamId: 'team-btc',
+    builtin: true,
   },
 ];
 
-const MOCK_TASK_RUNS = {
-  'task-1': [
-    {
-      id: 'run-1',
-      time: '14:15',
-      result: 'BUY (82%)',
-      resultColor: '#34C759',
-      duration: '42s',
-      desc: '基本面强劲，技术面突破...',
-      trade: 'Trade: +0.05 BTC @ $84,230',
-      tradeColor: '#34C759',
-      tradeIcon: 'trending-up',
-    },
-    {
-      id: 'run-2',
-      time: '14:00',
-      result: 'HOLD (58%)',
-      resultColor: '#FF9500',
-      duration: '39s',
-      desc: '方向不明确，建议观望...',
-    },
-    {
-      id: 'run-3',
-      time: '13:45',
-      result: 'BUY (75%)',
-      resultColor: '#34C759',
-      duration: '45s',
-      desc: '情绪面转稳，堆上资金流入...',
-      trade: 'Trade: +0.03 BTC @ $83,680',
-      tradeColor: '#34C759',
-      tradeIcon: 'trending-up',
-    },
-    {
-      id: 'run-4',
-      time: '13:30',
-      result: 'Recovered',
-      resultColor: '#FF9500',
-      resultBg: '#FF950020',
-      duration: '44s',
-      desc: 'Missed run — recovered at 13:31',
-      tradeIcon: 'rotate-ccw',
-    },
-  ],
-};
+let userTasks = null; // lazy loaded
+
+async function loadUserTasks() {
+  if (userTasks !== null) return;
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    userTasks = stored ? JSON.parse(stored) : [];
+  } catch {
+    userTasks = [];
+  }
+}
+
+async function saveUserTasks() {
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(userTasks));
+}
 
 export async function getTasks(statusFilter) {
-  let list = MOCK_TASKS;
+  await loadUserTasks();
+  let list = [...BUILTIN_TASKS, ...userTasks];
   if (statusFilter && statusFilter !== '全部') {
     const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
     list = list.filter((t) => t.status === map[statusFilter]);
@@ -91,8 +44,23 @@ export async function getTasks(statusFilter) {
   return list;
 }
 
+export async function addTask(task) {
+  await loadUserTasks();
+  userTasks.push({ ...task, builtin: false });
+  await saveUserTasks();
+}
+
+export async function deleteTask(taskId) {
+  await loadUserTasks();
+  const task = [...BUILTIN_TASKS, ...userTasks].find(t => t.id === taskId);
+  if (task?.builtin) return { success: false, error: '内置任务不可删除' };
+  userTasks = userTasks.filter(t => t.id !== taskId);
+  await saveUserTasks();
+  return { success: true };
+}
+
 export async function getTaskRuns(taskId) {
-  return MOCK_TASK_RUNS[taskId] || [];
+  return [];
 }
 
 export async function runTask(taskId) {

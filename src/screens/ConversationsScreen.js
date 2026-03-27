@@ -6,10 +6,11 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Search, SquarePen } from 'lucide-react-native';
 import { useTheme } from '../theme';
-import { getAgents, getTeams } from '../api';
+import { getAgents, getTeams, deleteAgent, deleteTeam } from '../api';
 import { getIcon } from '../components/IconMap';
 
 const filters = ['Agent', 'Teams'];
@@ -40,6 +41,25 @@ export default function ConversationsScreen({ navigation }) {
     if (f !== activeFilter) setActiveFilter(f);
   };
 
+  const handleDelete = (item) => {
+    if (item.builtin) return;
+    const isTeam = activeFilter === 'Teams';
+    const label = isTeam ? '分析群' : 'Agent';
+    Alert.alert(`删除${label}`, `确认删除「${item.name}」？`, [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除', style: 'destructive',
+        onPress: async () => {
+          try {
+            if (isTeam) await deleteTeam(item.id);
+            else await deleteAgent(item.id);
+            fetchData(activeFilter);
+          } catch { /* ignore */ }
+        },
+      },
+    ]);
+  };
+
   const renderItem = ({ item }) => {
     const IconComponent = getIcon(item.icon);
     return (
@@ -55,6 +75,7 @@ export default function ConversationsScreen({ navigation }) {
             iconBg: item.iconBg,
           });
         }}
+        onLongPress={() => handleDelete(item)}
         activeOpacity={0.6}
       >
         <View style={[styles.avatar, { backgroundColor: item.iconBg }]}>
