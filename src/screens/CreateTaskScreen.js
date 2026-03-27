@@ -35,7 +35,7 @@ export default function CreateTaskScreen({ navigation }) {
   const [selectedTeam, setSelectedTeam] = useState('team-btc');
   const [pair, setPair] = useState('BTC/USDT');
   const [intervalMin, setIntervalMin] = useState('15');
-  const [amount, setAmount] = useState('500');
+  const [amount, setAmount] = useState('10');
 
   const togglePlugin = (id) => {
     setSelectedPlugins((prev) =>

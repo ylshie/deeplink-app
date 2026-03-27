@@ -75,7 +75,7 @@ export default function TasksScreen({ navigation }) {
       } else {
         await fetch(`${API_BASE_URL}/trading/auto/start`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId, teamId: taskTeamMap[taskId] || 'team-btc', autoExecute: true, quoteAmount: 500 }),
+          body: JSON.stringify({ taskId, teamId: taskTeamMap[taskId] || 'team-btc', autoExecute: true, quoteAmount: 10 }),
         });
         setAutoStatus(prev => ({ ...prev, [taskId]: 'running' }));
       }

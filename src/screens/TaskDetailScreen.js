@@ -32,7 +32,7 @@ export default function TaskDetailScreen({ navigation, route }) {
   const [config, setConfig] = useState({
     pair: 'BTC/USDT',
     timeframe: '15分钟',
-    quoteAmount: '500',
+    quoteAmount: '10',
     intervalMin: '15',
     confidenceThreshold: '70',
     maxPositions: '1',
@@ -92,7 +92,7 @@ export default function TaskDetailScreen({ navigation, route }) {
           taskId: id,
           teamId,
           autoExecute: true,
-          quoteAmount: parseInt(config.quoteAmount) || 500,
+          quoteAmount: parseInt(config.quoteAmount) || 10,
           intervalMs: (parseInt(config.intervalMin) || 15) * 60 * 1000,
         }),
       });
