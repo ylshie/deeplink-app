@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { ChevronLeft, Eye, EyeOff, Trash2, Plus, Check } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +17,11 @@ import { API_BASE_URL } from '../api/config';
 
 const STORAGE_KEY = '@deeplink_binance_credentials';
 const SESSION_KEY = '@deeplink_session';
+
+function showAlert(title, msg) {
+  if (Platform.OS === 'web') window.alert(msg ? `${title}: ${msg}` : title);
+  else Alert.alert(title, msg);
+}
 
 export default function ApiKeysScreen({ navigation }) {
   const { colors } = useTheme();
@@ -42,7 +48,7 @@ export default function ApiKeysScreen({ navigation }) {
 
   const handleValidateAndSave = async () => {
     if (!newKey.trim() || !newSecret.trim()) {
-      Alert.alert('提示', '请填写 API Key 和 Secret Key');
+      showAlert('提示', '请填写 API Key 和 Secret Key');
       return;
     }
 
@@ -57,7 +63,7 @@ export default function ApiKeysScreen({ navigation }) {
       const result = await res.json();
 
       if (!result.valid) {
-        Alert.alert('验证失败', result.error || '无法连接到 Binance，请检查密钥是否正确');
+        showAlert('验证失败', result.error || '无法连接到 Binance，请检查密钥是否正确');
         return;
       }
 
@@ -91,26 +97,40 @@ export default function ApiKeysScreen({ navigation }) {
       setNewSecret('');
 
       const assetCount = Object.keys(result.balances || {}).length;
-      Alert.alert('连接成功', `Binance 账户已连接，检测到 ${assetCount} 种资产`);
+      showAlert('连接成功', `Binance 账户已连接，检测到 ${assetCount} 种资产`);
     } catch (err) {
-      Alert.alert('错误', err.message || '网络连接失败');
+      showAlert('错误', err.message || '网络连接失败');
     } finally {
       setValidating(false);
     }
   };
 
-  const handleDelete = () => {
-    Alert.alert('确认断开', '将删除本地保存的加密密钥，不影响 Binance 账户', [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '断开',
-        style: 'destructive',
-        onPress: async () => {
-          await AsyncStorage.removeItem(STORAGE_KEY);
-          setSavedKey(null);
-        },
-      },
-    ]);
+  const doDisconnect = async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    // Also disconnect on server
+    try {
+      const sess = await AsyncStorage.getItem(SESSION_KEY);
+      if (sess) {
+        const { token: sessToken } = JSON.parse(sess);
+        await fetch(`${API_BASE_URL}/user/binance/disconnect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
+        });
+      }
+    } catch { /* */ }
+    setSavedKey(null);
+  };
+
+  const handleDelete = async () => {
+    if (Platform.OS === 'web') {
+      if (!window.confirm('确认断开 Binance 连接？')) return;
+      await doDisconnect();
+    } else {
+      Alert.alert('确认断开', '将删除保存的加密密钥，不影响 Binance 账户', [
+        { text: '取消', style: 'cancel' },
+        { text: '断开', style: 'destructive', onPress: doDisconnect },
+      ]);
+    }
   };
 
   const handleCheckBalance = async () => {
@@ -128,9 +148,9 @@ export default function ApiKeysScreen({ navigation }) {
         lines.push(`${a.asset}: ${a.quantity.toFixed(6)} ($${a.value.toFixed(2)})`);
       });
       lines.push(`\n总估值: $${data.totalValue?.toFixed(2) || 0}`);
-      Alert.alert('账户余额', lines.join('\n'));
+      showAlert('账户余额', lines.join('\n'));
     } catch (err) {
-      Alert.alert('错误', err.message);
+      showAlert('错误', err.message);
     }
   };
 
