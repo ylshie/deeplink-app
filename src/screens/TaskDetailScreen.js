@@ -191,11 +191,9 @@ export default function TaskDetailScreen({ navigation, route }) {
 
   const renderTrades = () => {
     const executed = signals.filter(isTradeExecution);
-    // Calculate stats
-    const totalPnl = executed.reduce((s, t) => s + (t.pnl || 0), 0);
-    const wins = executed.filter(t => (t.pnl || 0) > 0).length;
-    const winRate = executed.length > 0 ? ((wins / executed.length) * 100).toFixed(1) : '0.0';
-    const pnlColor = totalPnl >= 0 ? '#34C759' : '#F54A45';
+    const totalSpent = executed.reduce((s, t) => s + (t.quoteAmount || 0), 0);
+    const buyCount = executed.filter(t => ['BUY', 'EXECUTE'].includes(t.action)).length;
+    const sellCount = executed.filter(t => t.action === 'SELL').length;
 
     return (
       <>
@@ -203,18 +201,16 @@ export default function TaskDetailScreen({ navigation, route }) {
         {executed.length > 0 && (
           <View style={styles.tradesSummary}>
             <View style={styles.tradesStat}>
-              <Text style={[styles.tradesStatVal, { color: pnlColor }]}>
-                {totalPnl >= 0 ? '+' : ''}${Math.abs(totalPnl).toFixed(2)}
-              </Text>
-              <Text style={styles.tradesStatLabel}>总盈亏</Text>
+              <Text style={styles.tradesStatValDark}>${totalSpent.toFixed(2)}</Text>
+              <Text style={styles.tradesStatLabel}>总交易额</Text>
             </View>
             <View style={styles.tradesStat}>
-              <Text style={styles.tradesStatValDark}>{winRate}%</Text>
-              <Text style={styles.tradesStatLabel}>胜率</Text>
+              <Text style={[styles.tradesStatVal, { color: '#34C759' }]}>{buyCount}</Text>
+              <Text style={styles.tradesStatLabel}>买入</Text>
             </View>
             <View style={styles.tradesStat}>
-              <Text style={styles.tradesStatValDark}>{executed.length}</Text>
-              <Text style={styles.tradesStatLabel}>总交易</Text>
+              <Text style={[styles.tradesStatVal, { color: '#F54A45' }]}>{sellCount}</Text>
+              <Text style={styles.tradesStatLabel}>卖出</Text>
             </View>
           </View>
         )}
@@ -222,9 +218,8 @@ export default function TaskDetailScreen({ navigation, route }) {
         {/* Trade rows */}
         {executed.map((sig) => {
           const badge = getBadge(sig.action);
-          const sigPnl = sig.pnl || 0;
-          const sigPnlPct = sig.pnlPct || 0;
-          const sigPnlColor = sigPnl >= 0 ? '#34C759' : '#F54A45';
+          const amount = sig.quoteAmount || 0;
+          const price = sig.entryPrice || 0;
           return (
             <TouchableOpacity
               key={sig.id + '-t'}
@@ -240,12 +235,12 @@ export default function TaskDetailScreen({ navigation, route }) {
                 <Text style={styles.tradeRowTime}>{formatDateTime(sig.timestamp)} · 置信度 {sig.confidence}%</Text>
               </View>
               <View style={styles.tradeRowRight}>
-                <Text style={[styles.tradeRowPnl, { color: sigPnlColor }]}>
-                  {sigPnl >= 0 ? '+' : ''}${Math.abs(sigPnl).toFixed(2)}
+                <Text style={[styles.tradeRowPnl, { color: badge.color }]}>
+                  ${amount.toFixed(2)}
                 </Text>
-                <Text style={[styles.tradeRowPct, { color: sigPnlColor }]}>
-                  {sigPnlPct >= 0 ? '+' : ''}{sigPnlPct.toFixed(2)}%
-                </Text>
+                {price > 0 && (
+                  <Text style={styles.tradeRowPct}>@${price.toLocaleString()}</Text>
+                )}
               </View>
             </TouchableOpacity>
           );

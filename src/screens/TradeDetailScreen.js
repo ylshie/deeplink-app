@@ -22,9 +22,11 @@ export default function TradeDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
   const trade = route?.params?.trade || {};
   const votes = trade.votes || [];
-
   const badge = getBadge(trade.action);
-  const pnlColor = (trade.pnl || 0) >= 0 ? '#34C759' : '#F54A45';
+  const isBuy = ['BUY', 'EXECUTE', 'DEPLOY'].includes(trade.action);
+  const price = trade.entryPrice || 0;
+  const qty = trade.quantity || 0;
+  const amount = trade.quoteAmount || 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -49,7 +51,7 @@ export default function TradeDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.overviewMid}>
                 <Text style={styles.overviewPair}>{trade.pair || 'BTC/USDT'}</Text>
-                <Text style={styles.overviewTime}>{formatDateTime(trade.timestamp)} · 模拟交易</Text>
+                <Text style={styles.overviewTime}>{formatDateTime(trade.timestamp)} · 实盘交易</Text>
               </View>
             </View>
             <View style={styles.confBadge}>
@@ -62,20 +64,16 @@ export default function TradeDetailScreen({ navigation, route }) {
 
           <View style={styles.pnlRow}>
             <View style={styles.pnlItem}>
-              <Text style={[styles.pnlValue, { color: pnlColor }]}>
-                {(trade.pnl || 0) >= 0 ? '+' : ''}${Math.abs(trade.pnl || 0).toFixed(2)}
-              </Text>
-              <Text style={styles.pnlLabel}>净盈亏</Text>
+              <Text style={[styles.pnlValue, { color: badge.color }]}>${amount.toFixed(2)}</Text>
+              <Text style={styles.pnlLabel}>交易额</Text>
             </View>
             <View style={styles.pnlItem}>
-              <Text style={[styles.pnlValue, { color: pnlColor }]}>
-                {(trade.pnlPct || 0) >= 0 ? '+' : ''}{(trade.pnlPct || 0).toFixed(2)}%
-              </Text>
-              <Text style={styles.pnlLabel}>收益率</Text>
+              <Text style={styles.pnlValueDark}>{qty > 0 ? qty.toFixed(8) : '—'}</Text>
+              <Text style={styles.pnlLabel}>数量</Text>
             </View>
             <View style={styles.pnlItem}>
-              <Text style={styles.pnlValueDark}>{trade.duration || '—'}</Text>
-              <Text style={styles.pnlLabel}>持仓时间</Text>
+              <Text style={styles.pnlValueDark}>${price > 0 ? price.toLocaleString() : '—'}</Text>
+              <Text style={styles.pnlLabel}>成交价</Text>
             </View>
           </View>
         </View>
@@ -84,11 +82,12 @@ export default function TradeDetailScreen({ navigation, route }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>订单信息</Text>
           <View style={styles.infoCard}>
-            <InfoRow label="买入价格" value={`$${(trade.entryPrice || 0).toLocaleString()}`} />
-            <InfoRow label="当前价格" value={`$${(trade.exitPrice || trade.currentPrice || 0).toLocaleString()}`} />
-            <InfoRow label="买入数量" value={`${trade.quantity || 0} BTC`} />
-            <InfoRow label="仓位占比" value={`${trade.positionPct || 5}%`} />
-            <InfoRow label="止损价格" value={`$${(trade.stopLoss || 0).toLocaleString()}`} last />
+            <InfoRow label="交易方向" value={isBuy ? '买入' : '卖出'} />
+            <InfoRow label="交易对" value={trade.pair || 'BTC/USDT'} />
+            <InfoRow label="成交价格" value={price > 0 ? `$${price.toLocaleString()}` : '—'} />
+            <InfoRow label="成交数量" value={qty > 0 ? `${qty.toFixed(8)}` : '—'} />
+            <InfoRow label="交易金额" value={`${amount} USDT`} />
+            <InfoRow label="置信度" value={`${trade.confidence || 0}%`} last />
           </View>
         </View>
 
