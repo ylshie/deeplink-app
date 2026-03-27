@@ -20,6 +20,7 @@ const agentIcons = {
 export default function TradeDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
   const trade = route?.params?.trade || {};
+  const votes = trade.votes || [];
 
   const badge = getBadge(trade.action);
   const pnlColor = (trade.pnl || 0) >= 0 ? '#34C759' : '#F54A45';
@@ -91,42 +92,35 @@ export default function TradeDetailScreen({ navigation, route }) {
         </View>
 
         {/* Agent 投票明细 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Agent 投票明细</Text>
-          <View style={styles.infoCard}>
-            {(trade.votes || defaultVotes).map((v, i, arr) => {
-              const agentInfo = agentIcons[v.agent] || { icon: Brain, color: '#5856D6' };
-              const AgentIcon = agentInfo.icon;
-              return (
-                <View key={v.agent}>
-                  <View style={styles.voteRow}>
-                    <View style={[styles.voteAvatar, { backgroundColor: agentInfo.color }]}>
-                      <AgentIcon size={14} color="#FFF" />
+        {votes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Agent 投票明细</Text>
+            <View style={styles.infoCard}>
+              {votes.map((v, i) => {
+                const agentInfo = agentIcons[v.agent] || { icon: Brain, color: '#5856D6' };
+                const AgentIcon = agentInfo.icon;
+                const voteColor = v.vote === '看多' ? '#34C759' : v.vote === '看空' ? '#F54A45' : '#646A73';
+                return (
+                  <View key={v.agent + i}>
+                    <View style={styles.voteRow}>
+                      <View style={[styles.voteAvatar, { backgroundColor: agentInfo.color }]}>
+                        <AgentIcon size={14} color="#FFF" />
+                      </View>
+                      <Text style={styles.voteName}>{v.agent}</Text>
+                      <View style={styles.voteSpacer} />
+                      <Text style={[styles.voteResult, { color: voteColor }]}>{v.vote}</Text>
                     </View>
-                    <Text style={styles.voteName}>{v.agent}</Text>
-                    <View style={styles.voteSpacer} />
-                    <Text style={[styles.voteResult, { color: v.vote === '看多' ? '#34C759' : v.vote === '看空' ? '#F54A45' : '#646A73' }]}>
-                      {v.vote}
-                    </Text>
+                    {i < votes.length - 1 && <View style={styles.divider} />}
                   </View>
-                  {i < arr.length - 1 && <View style={styles.divider} />}
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
 }
-
-const defaultVotes = [
-  { agent: '基本面分析', vote: '看多' },
-  { agent: '技术面分析', vote: '看多' },
-  { agent: '情绪面分析', vote: '看多' },
-  { agent: '风控官', vote: '中性' },
-  { agent: '量化策略', vote: '看多' },
-];
 
 function getBadge(action) {
   if (['BUY', 'EXECUTE'].includes(action)) return { bg: '#E8F8EE', color: '#34C759' };
