@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import {
   Search,
@@ -83,18 +84,24 @@ export default function TasksScreen({ navigation }) {
     }
   };
 
-  const handleDeleteTask = (task) => {
+  const handleDeleteTask = async (task) => {
     if (task.builtin) return;
-    Alert.alert('删除任务', `确认删除「${task.name}」？`, [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除', style: 'destructive',
-        onPress: async () => {
-          await deleteTask(task.id);
-          fetchData(activeFilter);
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`确认删除「${task.name}」？`)) return;
+      await deleteTask(task.id);
+      fetchData(activeFilter);
+    } else {
+      Alert.alert('删除任务', `确认删除「${task.name}」？`, [
+        { text: '取消', style: 'cancel' },
+        {
+          text: '删除', style: 'destructive',
+          onPress: async () => {
+            await deleteTask(task.id);
+            fetchData(activeFilter);
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
 
   return (
