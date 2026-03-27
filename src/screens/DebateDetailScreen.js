@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ChevronLeft, Brain, TrendingUp, Activity, Shield, BarChart3 } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { formatTime } from '../utils/formatTime';
 
 const agentMeta = {
   'agent-fundamental': { name: '基本面分析', icon: Brain, color: '#5856D6' },
@@ -61,7 +62,7 @@ export default function DebateDetailScreen({ navigation, route }) {
         <View style={styles.summaryCard}>
           <View style={styles.summaryTop}>
             <View style={styles.summaryLeft}>
-              <Text style={styles.summaryTime}>{signal.time}</Text>
+              <Text style={styles.summaryTime}>{formatTime(signal.timestamp)}</Text>
               <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                 <Text style={[styles.badgeText, { color: badge.color }]}>{signal.action}</Text>
               </View>

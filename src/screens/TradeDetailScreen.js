@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { ChevronLeft, Share2, Brain, TrendingUp, Activity, Shield, BarChart3 } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { formatDateTime } from '../utils/formatTime';
 
 const agentIcons = {
   '基本面分析': { icon: Brain, color: '#5856D6' },
@@ -48,7 +49,7 @@ export default function TradeDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.overviewMid}>
                 <Text style={styles.overviewPair}>{trade.pair || 'BTC/USDT'}</Text>
-                <Text style={styles.overviewTime}>{trade.time || ''} · 模拟交易</Text>
+                <Text style={styles.overviewTime}>{formatDateTime(trade.timestamp)} · 模拟交易</Text>
               </View>
             </View>
             <View style={styles.confBadge}>

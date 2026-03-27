@@ -16,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
+import { formatTime, formatDateTime } from '../utils/formatTime';
 
 const tabs = ['历史', '交易', '配置'];
 
@@ -139,7 +140,7 @@ export default function TaskDetailScreen({ navigation, route }) {
         {/* Header: [time + badge] ... [confidence%] — padding [14,16] */}
         <View style={styles.signalHead}>
           <View style={styles.signalLeft}>
-            <Text style={[styles.signalTime, { color: '#1F2329' }]}>{sig.time}</Text>
+            <Text style={[styles.signalTime, { color: '#1F2329' }]}>{formatTime(sig.timestamp)}</Text>
             <View style={[styles.signalBadge, { backgroundColor: badge.bg }]}>
               <Text style={[styles.signalBadgeText, { color: badge.color }]}>{sig.action}</Text>
             </View>
@@ -236,7 +237,7 @@ export default function TaskDetailScreen({ navigation, route }) {
               </View>
               <View style={styles.tradeRowMid}>
                 <Text style={styles.tradeRowPair}>{sig.pair || 'BTC/USDT'}</Text>
-                <Text style={styles.tradeRowTime}>{sig.time} · 置信度 {sig.confidence}%</Text>
+                <Text style={styles.tradeRowTime}>{formatDateTime(sig.timestamp)} · 置信度 {sig.confidence}%</Text>
               </View>
               <View style={styles.tradeRowRight}>
                 <Text style={[styles.tradeRowPnl, { color: sigPnlColor }]}>
