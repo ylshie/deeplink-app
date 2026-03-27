@@ -63,69 +63,63 @@ export default function ConversationsScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const IconComponent = getIcon(item.icon);
     return (
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => {
-          const isTeam = activeFilter === 'Teams';
-          navigation.navigate(isTeam ? 'TeamChat' : 'AgentChat', {
-            id: item.id,
-            name: item.name,
-            agentCount: item.agentCount,
-            icon: item.icon,
-            iconBg: item.iconBg,
-          });
-        }}
-        onLongPress={() => handleDelete(item)}
-        activeOpacity={0.6}
-      >
-        <View style={[styles.avatar, { backgroundColor: item.iconBg }]}>
-          <IconComponent size={22} color="#FFFFFF" />
-        </View>
-        <View style={styles.rowContent}>
-          <View style={styles.rowTop}>
-            <View style={styles.rowTitleWrap}>
-              <Text style={[styles.rowName, { color: colors.textPrimary }]} numberOfLines={1}>
-                {item.name}
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={styles.rowTouchable}
+          onPress={() => {
+            const isTeam = activeFilter === 'Teams';
+            navigation.navigate(isTeam ? 'TeamChat' : 'AgentChat', {
+              id: item.id,
+              name: item.name,
+              agentCount: item.agentCount,
+              icon: item.icon,
+              iconBg: item.iconBg,
+            });
+          }}
+          activeOpacity={0.6}
+        >
+          <View style={[styles.avatar, { backgroundColor: item.iconBg }]}>
+            <IconComponent size={22} color="#FFFFFF" />
+          </View>
+          <View style={styles.rowContent}>
+            <View style={styles.rowTop}>
+              <View style={styles.rowTitleWrap}>
+                <Text style={[styles.rowName, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                {item.tag && (
+                  <View style={[styles.tag, { backgroundColor: item.tagColor + '20' }]}>
+                    <Text style={[styles.tagText, { color: item.tagColor }]}>{item.tag}</Text>
+                  </View>
+                )}
+              </View>
+              {item.time ? (
+                <Text style={[styles.time, { color: colors.textSecondary }]}>{item.time}</Text>
+              ) : null}
+            </View>
+            <View style={styles.rowBottom}>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                {item.subtitle}
               </Text>
-              {item.tag && (
-                <View
-                  style={[
-                    styles.tag,
-                    { backgroundColor: item.tagColor + '20' },
-                  ]}
-                >
-                  <Text style={[styles.tagText, { color: item.tagColor }]}>
-                    {item.tag}
-                  </Text>
+              {item.badge > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{item.badge}</Text>
                 </View>
               )}
             </View>
-            {item.time ? (
-              <Text style={[styles.time, { color: colors.textSecondary }]}>{item.time}</Text>
-            ) : null}
-          </View>
-          <View style={styles.rowBottom}>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.subtitle}
-            </Text>
-            {item.badge > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.badgeText}>{item.badge}</Text>
-              </View>
+            {activeFilter === 'Teams' && item.agentCount > 0 && (
+              <Text style={[styles.agentCountText, { color: colors.primary }]}>
+                {item.agentCount} Agents
+              </Text>
             )}
           </View>
-          {activeFilter === 'Teams' && item.agentCount > 0 && (
-            <Text style={[styles.agentCountText, { color: colors.primary }]}>
-              {item.agentCount} Agents
-            </Text>
-          )}
-        </View>
+        </TouchableOpacity>
         {!item.builtin && (
           <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
             <Trash2 size={16} color="#F54A45" />
           </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -232,6 +226,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  rowTouchable: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,

@@ -146,9 +146,8 @@ export default function TasksScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           {tasks.map((task) => (
+            <View key={task.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <TouchableOpacity
-              key={task.id}
-              style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
               activeOpacity={0.7}
               onPress={() =>
                 navigation.navigate('TaskDetail', {
@@ -156,7 +155,6 @@ export default function TasksScreen({ navigation }) {
                   name: task.name,
                 })
               }
-              onLongPress={() => handleDeleteTask(task)}
             >
               {/* Card Header */}
               <View style={styles.cardHeader}>
@@ -241,6 +239,8 @@ export default function TasksScreen({ navigation }) {
                 )}
               </View>
 
+            </TouchableOpacity>
+
               {/* Delete button for user-created tasks */}
               {!task.builtin && (
                 <TouchableOpacity
@@ -251,7 +251,7 @@ export default function TasksScreen({ navigation }) {
                   <Text style={styles.deleteText}>删除任务</Text>
                 </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </View>
           ))}
         </ScrollView>
       )}
