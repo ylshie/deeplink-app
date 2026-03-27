@@ -114,13 +114,13 @@ export default function TaskDetailScreen({ navigation, route }) {
     } catch (e) { setError(e.message); }
   };
 
-  // ── Badge colors matching design ──
+  // ── Badge + trade colors matching design exactly ──
   const getBadge = (action) => {
     if (['BUY', 'EXECUTE', 'DEPLOY'].includes(action))
-      return { bg: '#E8F8EE', color: '#34C759' };
+      return { bg: '#E8F8EE', color: '#34C759', tradeColor: '#4E6EF2' };  // badge green, trade blue
     if (['SELL'].includes(action))
-      return { bg: '#FEECEB', color: '#F54A45' };
-    return { bg: '#ECEEF4', color: '#646A73' }; // HOLD
+      return { bg: '#FEECEB', color: '#F54A45', tradeColor: '#F54A45' };  // badge red, trade red
+    return { bg: '#ECEEF4', color: '#646A73', tradeColor: '#646A73' };    // HOLD grey
   };
 
   // Is this signal an actual trade execution?
@@ -129,17 +129,17 @@ export default function TaskDetailScreen({ navigation, route }) {
     (sig.trade.includes('买入') || sig.trade.includes('卖出') ||
      sig.trade.includes('BUY') || sig.trade.includes('SELL'));
 
-  // ── Signal Card (matches design exactly) ──
+  // ── Signal Card (matches DEEPLINK.pen design: H1Wjz/HK2sg/rWJTQ) ──
   const SignalCard = ({ sig, showFooter }) => {
     const badge = getBadge(sig.action);
     const hasFooter = showFooter && isTradeExecution(sig);
 
     return (
-      <View style={[styles.signalCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        {/* Header: time + badge + confidence */}
+      <View style={[styles.signalCard, { backgroundColor: '#F5F7FA', borderColor: '#E5E8ED' }]}>
+        {/* Header: [time + badge] ... [confidence%] — padding [14,16] */}
         <View style={styles.signalHead}>
           <View style={styles.signalLeft}>
-            <Text style={[styles.signalTime, { color: colors.textPrimary }]}>{sig.time}</Text>
+            <Text style={[styles.signalTime, { color: '#1F2329' }]}>{sig.time}</Text>
             <View style={[styles.signalBadge, { backgroundColor: badge.bg }]}>
               <Text style={[styles.signalBadgeText, { color: badge.color }]}>{sig.action}</Text>
             </View>
@@ -147,17 +147,17 @@ export default function TaskDetailScreen({ navigation, route }) {
           <Text style={[styles.signalConf, { color: badge.color }]}>{sig.confidence}%</Text>
         </View>
 
-        {/* Body: summary */}
+        {/* Body: summary — padding [0,16,14,16], color #646A73, fontSize 13, lineHeight 1.5 */}
         <View style={styles.signalBody}>
-          <Text style={[styles.signalSummary, { color: '#646A73' }]}>{sig.summary}</Text>
+          <Text style={styles.signalSummary}>{sig.summary}</Text>
         </View>
 
-        {/* Footer: trade execution (only when applicable) */}
+        {/* Footer: trade execution + tokens — border top #E5E8ED, padding [10,16] */}
         {hasFooter && (
-          <View style={[styles.signalFooter, { borderTopColor: colors.cardBorder }]}>
-            <Text style={[styles.signalTrade, { color: badge.color }]}>{sig.trade}</Text>
+          <View style={styles.signalFooter}>
+            <Text style={[styles.signalTrade, { color: badge.tradeColor }]}>{sig.trade}</Text>
             {sig.tradePrice && (
-              <Text style={[styles.signalTokens, { color: '#8F959E' }]}>{sig.tradePrice}</Text>
+              <Text style={styles.signalTokens}>{sig.tradePrice}</Text>
             )}
           </View>
         )}
@@ -358,31 +358,32 @@ const styles = StyleSheet.create({
   emptyWrap: { paddingTop: 60, alignItems: 'center' },
   emptyText: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
 
-  // Signal card — matches design: rounded 16, bg #F5F7FA, border #E5E8ED
-  signalCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-
-  // Header row: [time + badge] ... [confidence%]
+  // Signal card — exact match to DEEPLINK.pen design (H1Wjz node)
+  signalCard: {
+    borderRadius: 16, borderWidth: 1, overflow: 'hidden',
+    // bg + border colors set inline: #F5F7FA + #E5E8ED
+  },
+  // Header: [time + badge] ... [confidence%]
   signalHead: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 0,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
   signalLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   signalTime: { fontSize: 15, fontWeight: '600' },
   signalBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   signalBadgeText: { fontSize: 12, fontWeight: '700' },
   signalConf: { fontSize: 14, fontWeight: '600' },
-
-  // Body: summary text
-  signalBody: { paddingHorizontal: 16, paddingTop: 0, paddingBottom: 14 },
-  signalSummary: { fontSize: 13, lineHeight: 20, marginTop: 10 },
-
-  // Footer: trade execution + tokens, top border
+  // Body: summary
+  signalBody: { paddingHorizontal: 16, paddingBottom: 14 },
+  signalSummary: { fontSize: 13, lineHeight: 20, color: '#646A73' },
+  // Footer: trade line + tokens
   signalFooter: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: '#E5E8ED',
   },
   signalTrade: { fontSize: 12, fontWeight: '500' },
-  signalTokens: { fontSize: 11 },
+  signalTokens: { fontSize: 11, color: '#8F959E' },
 
   configCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
   editConfigBtn: {
