@@ -6,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
+  FlatList,
   Platform,
   Alert,
 } from 'react-native';
-import { Check, Plus } from 'lucide-react-native';
+import { Check, Plus, ChevronDown } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents } from '../api';
 
@@ -25,6 +27,7 @@ export default function CreateTeamScreen({ navigation }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [pair, setPair] = useState('BTC/USDT');
+  const [showPairPicker, setShowPairPicker] = useState(false);
   const [agents, setAgents] = useState([]);
   const [selectedAgentIds, setSelectedAgentIds] = useState([]);
 
@@ -99,17 +102,10 @@ export default function CreateTeamScreen({ navigation }) {
         {/* 交易对 */}
         <View style={styles.section}>
           <Text style={styles.label}>目标交易对</Text>
-          <View style={styles.pairList}>
-            {PAIRS.map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.pairChip, pair === p && styles.pairChipActive]}
-                onPress={() => setPair(p)}
-              >
-                <Text style={[styles.pairChipText, pair === p && styles.pairChipTextActive]}>{p}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={styles.selectRow} onPress={() => setShowPairPicker(true)}>
+            <Text style={styles.selectValue}>{pair}</Text>
+            <ChevronDown size={18} color="#8F959E" />
+          </TouchableOpacity>
         </View>
 
         {/* 选择 Agent */}
@@ -142,9 +138,43 @@ export default function CreateTeamScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Pair Picker Modal */}
+      <Modal visible={showPairPicker} transparent animationType="slide">
+        <TouchableOpacity style={pickerS.overlay} activeOpacity={1} onPress={() => setShowPairPicker(false)}>
+          <View style={pickerS.sheet}>
+            <View style={pickerS.header}>
+              <Text style={pickerS.title}>选择交易对</Text>
+              <TouchableOpacity onPress={() => setShowPairPicker(false)}>
+                <Text style={pickerS.done}>完成</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={PAIRS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={pickerS.row} onPress={() => { setPair(item); setShowPairPicker(false); }}>
+                  <Text style={[pickerS.rowText, pair === item && { color: '#4E6EF2', fontWeight: '600' }]}>{item}</Text>
+                  {pair === item && <Check size={18} color="#4E6EF2" />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
+
+const pickerS = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
+  sheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '50%', paddingBottom: 30 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E8ED' },
+  title: { fontSize: 16, fontWeight: '600', color: '#1F2329' },
+  done: { fontSize: 16, fontWeight: '600', color: '#4E6EF2' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F5F7FA' },
+  rowText: { fontSize: 16, color: '#1F2329' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -187,12 +217,10 @@ const styles = StyleSheet.create({
     width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#E5E8ED',
     alignItems: 'center', justifyContent: 'center',
   },
-  pairList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pairChip: {
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+  selectRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, height: 48, borderRadius: 14,
     backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
   },
-  pairChipActive: { backgroundColor: '#4E6EF2', borderColor: '#4E6EF2' },
-  pairChipText: { fontSize: 14, fontWeight: '500', color: '#646A73' },
-  pairChipTextActive: { color: '#FFFFFF' },
+  selectValue: { fontSize: 15, color: '#1F2329' },
 });

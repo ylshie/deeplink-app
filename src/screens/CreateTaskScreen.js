@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
+  Modal,
+  FlatList,
   Platform,
   Alert,
 } from 'react-native';
-import { Minus, Plus, ChevronRight } from 'lucide-react-native';
+import { Minus, Plus, ChevronDown, Check } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { addTask } from '../api';
 
@@ -35,6 +37,9 @@ export default function CreateTaskScreen({ navigation }) {
   const [selectedTeam, setSelectedTeam] = useState('team-btc');
   const [pair, setPair] = useState('BTC/USDT');
   const [frequency, setFrequency] = useState('每 15 分钟');
+  const [showPairPicker, setShowPairPicker] = useState(false);
+  const [showFreqPicker, setShowFreqPicker] = useState(false);
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
   const [rounds, setRounds] = useState(3);
   const [selectedMode, setSelectedMode] = useState('多数投票');
   const [autoExecute, setAutoExecute] = useState(true);
@@ -97,34 +102,28 @@ export default function CreateTaskScreen({ navigation }) {
         {/* 关联团队 */}
         <View style={styles.section}>
           <Text style={styles.label}>关联团队</Text>
-          <TouchableOpacity style={styles.selectRow}>
+          <TouchableOpacity style={styles.selectRow} onPress={() => setShowTeamPicker(true)}>
             <Text style={styles.selectValue}>{TEAMS.find(t => t.id === selectedTeam)?.name}</Text>
-            <ChevronRight size={18} color="#8F959E" />
+            <ChevronDown size={18} color="#8F959E" />
           </TouchableOpacity>
         </View>
 
         {/* 交易对 */}
         <View style={styles.section}>
           <Text style={styles.label}>交易对</Text>
-          <View style={styles.chipWrap}>
-            {PAIRS.map((p) => (
-              <TouchableOpacity key={p} style={[styles.selChip, pair === p && styles.selChipActive]} onPress={() => setPair(p)}>
-                <Text style={[styles.selChipText, pair === p && styles.selChipTextActive]}>{p}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={styles.selectRow} onPress={() => setShowPairPicker(true)}>
+            <Text style={styles.selectValue}>{pair}</Text>
+            <ChevronDown size={18} color="#8F959E" />
+          </TouchableOpacity>
         </View>
 
         {/* 执行频率 */}
         <View style={styles.section}>
           <Text style={styles.label}>执行频率</Text>
-          <View style={styles.chipWrap}>
-            {FREQS.map((f) => (
-              <TouchableOpacity key={f} style={[styles.selChip, frequency === f && styles.selChipActive]} onPress={() => setFrequency(f)}>
-                <Text style={[styles.selChipText, frequency === f && styles.selChipTextActive]}>{f}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={styles.selectRow} onPress={() => setShowFreqPicker(true)}>
+            <Text style={styles.selectValue}>{frequency}</Text>
+            <ChevronDown size={18} color="#8F959E" />
+          </TouchableOpacity>
         </View>
 
         {/* 辩论轮数 */}
@@ -210,9 +209,74 @@ export default function CreateTaskScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      {/* Picker Modals */}
+      <PickerModal
+        visible={showTeamPicker}
+        title="选择团队"
+        options={TEAMS.map(t => ({ key: t.id, label: t.name }))}
+        selected={selectedTeam}
+        onSelect={(key) => { setSelectedTeam(key); setShowTeamPicker(false); }}
+        onClose={() => setShowTeamPicker(false)}
+      />
+      <PickerModal
+        visible={showPairPicker}
+        title="选择交易对"
+        options={PAIRS.map(p => ({ key: p, label: p }))}
+        selected={pair}
+        onSelect={(key) => { setPair(key); setShowPairPicker(false); }}
+        onClose={() => setShowPairPicker(false)}
+      />
+      <PickerModal
+        visible={showFreqPicker}
+        title="选择执行频率"
+        options={FREQS.map(f => ({ key: f, label: f }))}
+        selected={frequency}
+        onSelect={(key) => { setFrequency(key); setShowFreqPicker(false); }}
+        onClose={() => setShowFreqPicker(false)}
+      />
     </View>
   );
 }
+
+function PickerModal({ visible, title, options, selected, onSelect, onClose }) {
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <TouchableOpacity style={pickerStyles.overlay} activeOpacity={1} onPress={onClose}>
+        <View style={pickerStyles.sheet}>
+          <View style={pickerStyles.header}>
+            <Text style={pickerStyles.title}>{title}</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={pickerStyles.done}>完成</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={options}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={pickerStyles.row} onPress={() => onSelect(item.key)}>
+                <Text style={[pickerStyles.rowText, selected === item.key && { color: '#4E6EF2', fontWeight: '600' }]}>
+                  {item.label}
+                </Text>
+                {selected === item.key && <Check size={18} color="#4E6EF2" />}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+const pickerStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
+  sheet: { backgroundColor: '#FFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '50%', paddingBottom: 30 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E8ED' },
+  title: { fontSize: 16, fontWeight: '600', color: '#1F2329' },
+  done: { fontSize: 16, fontWeight: '600', color: '#4E6EF2' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F5F7FA' },
+  rowText: { fontSize: 16, color: '#1F2329' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -250,14 +314,6 @@ const styles = StyleSheet.create({
   counterText: { fontSize: 16, fontWeight: '600', color: '#1F2329' },
 
   // Chips
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  selChip: {
-    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
-    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
-  },
-  selChipActive: { backgroundColor: '#4E6EF2', borderColor: '#4E6EF2' },
-  selChipText: { fontSize: 13, fontWeight: '500', color: '#646A73' },
-  selChipTextActive: { color: '#FFFFFF' },
   chipRow: { flexDirection: 'row', gap: 8 },
   chip: {
     paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
