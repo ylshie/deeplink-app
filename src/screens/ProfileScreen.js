@@ -20,10 +20,12 @@ import {
   Monitor,
 } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 import { API_BASE_URL } from '../api/config';
 
 export default function ProfileScreen({ navigation, session, onLogout }) {
   const { colors, isDark, mode, setMode } = useTheme();
+  const { t } = useI18n();
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +61,7 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>我的</Text>
+          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('profile_title')}</Text>
           <TouchableOpacity>
             <Settings size={22} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -80,7 +82,7 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
         {/* Portfolio Card */}
         <View style={[styles.portfolioCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <Text style={[styles.portfolioLabel, { color: colors.textSecondary }]}>
-            {portfolio?.connected ? 'Binance 交易账户' : '交易账户（未连接）'}
+            {portfolio?.connected ? t('profile_account_connected') : t('profile_account_disconnected')}
           </Text>
           <Text style={[styles.portfolioBalance, { color: colors.textPrimary }]}>
             ${(portfolio?.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -90,37 +92,37 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>
                 ${(portfolio?.usdt || 0).toFixed(2)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>USDT</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile_usdt')}</Text>
             </View>
             <View style={styles.portfolioStat}>
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>
                 {portfolio?.positionCount || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>持仓数</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile_positions')}</Text>
             </View>
             <View style={styles.portfolioStat}>
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>
                 {portfolio?.tradeCount || 0}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>交易数</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile_trades')}</Text>
             </View>
           </View>
         </View>
 
         {/* Menu Section */}
         <View style={[styles.menuSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <MenuItem icon={Key} label="API 密钥管理" colors={colors} onPress={() => navigation.navigate('ApiKeys')} />
+          <MenuItem icon={Key} label={t('profile_api_keys')} colors={colors} onPress={() => navigation.navigate('ApiKeys')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
-          <MenuItem icon={Bell} label="通知设置" colors={colors} onPress={() => navigation.navigate('Notifications')} />
+          <MenuItem icon={Bell} label={t('profile_notifications')} colors={colors} onPress={() => navigation.navigate('Notifications')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
-          <MenuItem icon={Languages} label="语言" value="中文" colors={colors} onPress={() => navigation.navigate('Language')} />
+          <MenuItem icon={Languages} label={t('profile_language')} value={t('profile_language_value')} colors={colors} onPress={() => navigation.navigate('Language')} />
           <View style={[styles.menuDivider, { backgroundColor: colors.divider }]} />
 
           {/* Theme Switcher inline */}
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
               {isDark ? <Moon size={20} color={colors.primary} /> : <Sun size={20} color={colors.primary} />}
-              <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>外观模式</Text>
+              <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>{t('profile_theme')}</Text>
             </View>
             <View style={styles.themeToggle}>
               {[
@@ -146,7 +148,7 @@ export default function ProfileScreen({ navigation, session, onLogout }) {
           <TouchableOpacity style={styles.menuItem} onPress={onLogout}>
             <View style={styles.menuLeft}>
               <LogOut size={20} color="#F54A45" />
-              <Text style={[styles.menuLabel, { color: '#F54A45' }]}>退出登录</Text>
+              <Text style={[styles.menuLabel, { color: '#F54A45' }]}>{t('profile_logout')}</Text>
             </View>
           </TouchableOpacity>
         </View>

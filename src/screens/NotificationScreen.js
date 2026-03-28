@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,42 @@ import {
 } from 'react-native';
 import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '../theme';
-
-const SETTINGS = [
-  { key: 'tradeExec', label: '交易执行通知', desc: '买入/卖出执行后推送', default: true },
-  { key: 'signal', label: '分析信号通知', desc: '每次 AI 分析完成后推送', default: true },
-  { key: 'risk', label: '风控预警', desc: '触发止损或异常时推送', default: true },
-  { key: 'priceAlert', label: '价格提醒', desc: '到达设定价格时推送', default: false },
-  { key: 'dailyReport', label: '每日报告', desc: '每日 22:00 推送交易总结', default: false },
-];
+import { useI18n } from '../i18n';
+import { getSettings, updateSettings } from '../api/settings';
 
 export default function NotificationScreen({ navigation }) {
   const { colors } = useTheme();
-  const [settings, setSettings] = useState(
-    Object.fromEntries(SETTINGS.map(s => [s.key, s.default]))
-  );
+  const { t } = useI18n();
+  const [settings, setSettings] = useState({
+    tradeExec: true,
+    signal: true,
+    risk: true,
+    priceAlert: false,
+    dailyReport: false,
+  });
 
-  const toggle = (key) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await getSettings();
+        if (s?.notifications) setSettings(s.notifications);
+      } catch { /* */ }
+    })();
+  }, []);
+
+  const toggle = (key) => {
+    const updated = { ...settings, [key]: !settings[key] };
+    setSettings(updated);
+    updateSettings({ notifications: updated }).catch(() => {});
+  };
+
+  const ITEMS = [
+    { key: 'tradeExec', label: t('notif_trade_exec'), desc: t('notif_trade_exec_desc') },
+    { key: 'signal', label: t('notif_signal'), desc: t('notif_signal_desc') },
+    { key: 'risk', label: t('notif_risk'), desc: t('notif_risk_desc') },
+    { key: 'priceAlert', label: t('notif_price'), desc: t('notif_price_desc') },
+    { key: 'dailyReport', label: t('notif_daily'), desc: t('notif_daily_desc') },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -32,13 +52,13 @@ export default function NotificationScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>通知设置</Text>
+        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>{t('notif_title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          {SETTINGS.map((s, i) => (
+          {ITEMS.map((s, i) => (
             <View key={s.key}>
               {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
               <View style={styles.row}>

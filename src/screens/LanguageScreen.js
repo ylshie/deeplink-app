@@ -1,12 +1,8 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ChevronLeft, Check } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 
 const LANGUAGES = [
   { key: 'zh-CN', label: '简体中文' },
@@ -16,12 +12,7 @@ const LANGUAGES = [
 
 export default function LanguageScreen({ navigation }) {
   const { colors } = useTheme();
-  const [selected, setSelected] = useState('zh-CN');
-
-  const handleSelect = (key) => {
-    setSelected(key);
-    // TODO: persist language setting + i18n switch
-  };
+  const { t, lang, setLang } = useI18n();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -29,21 +20,18 @@ export default function LanguageScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>语言</Text>
+        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>{t('lang_title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.content}>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          {LANGUAGES.map((lang, i) => (
-            <View key={lang.key}>
+          {LANGUAGES.map((l, i) => (
+            <View key={l.key}>
               {i > 0 && <View style={[styles.divider, { backgroundColor: colors.divider }]} />}
-              <TouchableOpacity
-                style={styles.row}
-                onPress={() => handleSelect(lang.key)}
-              >
-                <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{lang.label}</Text>
-                {selected === lang.key && <Check size={20} color={colors.primary} />}
+              <TouchableOpacity style={styles.row} onPress={() => setLang(l.key)}>
+                <Text style={[styles.rowLabel, { color: colors.textPrimary }]}>{l.label}</Text>
+                {lang === l.key && <Check size={20} color={colors.primary} />}
               </TouchableOpacity>
             </View>
           ))}

@@ -6,7 +6,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppNavigator from './src/navigation/AppNavigator';
 import LoginScreen from './src/screens/LoginScreen';
 import { ThemeProvider, useTheme } from './src/theme';
+import { I18nProvider } from './src/i18n';
 import { API_BASE_URL } from './src/api/config';
+import { registerForPushNotifications } from './src/services/notifications';
 
 const SESSION_KEY = '@deeplink_session';
 
@@ -45,6 +47,8 @@ function AppInner() {
     const sess = { token, email };
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sess));
     setSession(sess);
+    // Register push notifications after login
+    registerForPushNotifications().catch(() => {});
   };
 
   const handleLogout = async () => {
@@ -93,7 +97,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppInner />
+        <I18nProvider>
+          <AppInner />
+        </I18nProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

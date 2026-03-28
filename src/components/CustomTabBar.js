@@ -2,20 +2,22 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MessageCircle, CalendarClock, CircleUserRound } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { useI18n } from '../i18n';
 
-const tabConfig = [
-  { key: 'Conversations', label: '对话', icon: MessageCircle },
-  { key: 'Tasks', label: '任务', icon: CalendarClock },
-  { key: 'Profile', label: '我的', icon: CircleUserRound },
+const tabKeys = [
+  { key: 'Conversations', i18nKey: 'tab_chat', icon: MessageCircle },
+  { key: 'Tasks', i18nKey: 'tab_tasks', icon: CalendarClock },
+  { key: 'Profile', i18nKey: 'tab_profile', icon: CircleUserRound },
 ];
 
 export default function CustomTabBar({ state, navigation }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   return (
     <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
       <View style={[styles.pill, { backgroundColor: colors.tabPillBg, borderColor: colors.tabPillBorder }]}>
-        {tabConfig.map((tab, index) => {
+        {tabKeys.map((tab, index) => {
           const isFocused = state.index === index;
           const IconComponent = tab.icon;
 
@@ -36,7 +38,7 @@ export default function CustomTabBar({ state, navigation }) {
                   { color: isFocused ? '#FFFFFF' : colors.tabInactive, fontWeight: isFocused ? '600' : '500' },
                 ]}
               >
-                {tab.label}
+                {t(tab.i18nKey)}
               </Text>
             </TouchableOpacity>
           );
