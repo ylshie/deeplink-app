@@ -124,11 +124,10 @@ export default function TaskDetailScreen({ navigation, route }) {
     return { bg: '#ECEEF4', color: '#646A73', tradeColor: '#646A73' };    // HOLD grey
   };
 
-  // Is this signal an actual trade execution?
+  // Is this signal an actual trade execution? (not HOLD, not skipped)
   const isTradeExecution = (sig) =>
-    sig.trade &&
-    (sig.trade.includes('买入') || sig.trade.includes('卖出') ||
-     sig.trade.includes('BUY') || sig.trade.includes('SELL'));
+    ['BUY', 'SELL', 'EXECUTE'].includes(sig.action) &&
+    sig.entryPrice > 0;
 
   // ── Signal Card (matches DEEPLINK.pen design: H1Wjz/HK2sg/rWJTQ) ──
   const SignalCard = ({ sig, showFooter }) => {
