@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Search, Plus, Trash2 } from 'lucide-react-native';
+import { Search, SquarePen, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents, getTeams, deleteAgent, deleteTeam } from '../api';
 import { getIcon } from '../components/IconMap';
@@ -132,11 +132,14 @@ export default function ConversationsScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>对话</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity>
+          <TouchableOpacity style={styles.headerBtn}>
             <Search size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate(activeFilter === 'Teams' ? 'CreateTeam' : 'CreateAgent')}>
-            <Plus size={24} color={colors.textPrimary} />
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.navigate(activeFilter === 'Teams' ? 'CreateTeam' : 'CreateAgent')}
+          >
+            <SquarePen size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -200,6 +203,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  headerBtn: {
+    padding: 4,
   },
   filterRow: {
     flexDirection: 'row',
