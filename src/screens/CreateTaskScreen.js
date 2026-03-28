@@ -6,46 +6,42 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Switch,
+  Platform,
   Alert,
 } from 'react-native';
-import { Check } from 'lucide-react-native';
+import { Minus, Plus, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { addTask } from '../api';
 
-const PLUGINS = [
-  { id: 'coingecko', name: 'CoinGecko', icon: '🪙' },
-  { id: 'binance', name: 'Binance', icon: '🔶' },
-  { id: 'polymarket', name: 'Polymarket', icon: '📊' },
-];
-
-const MODELS = ['Claude Sonnet 4.5', 'GPT-4o', 'GPT-4o Mini'];
-
 const TEAMS = [
-  { id: 'team-btc', name: 'BTC 多维分析群' },
+  { id: 'team-btc', name: 'BTC 多维分析团队' },
   { id: 'team-eth-arb', name: 'ETH 套利监控组' },
   { id: 'team-quant', name: '量化策略研究群' },
 ];
 
+const MODES = ['多数投票', '加权投票', '一票否决'];
+
+function showAlert(title, msg) {
+  if (Platform.OS === 'web') window.alert(msg ? `${title}: ${msg}` : title);
+  else Alert.alert(title, msg);
+}
+
 export default function CreateTaskScreen({ navigation }) {
   const { colors } = useTheme();
   const [name, setName] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [selectedPlugins, setSelectedPlugins] = useState(['binance']);
-  const [selectedModel, setSelectedModel] = useState('GPT-4o');
   const [selectedTeam, setSelectedTeam] = useState('team-btc');
-  const [pair, setPair] = useState('BTC/USDT');
-  const [intervalMin, setIntervalMin] = useState('15');
-  const [amount, setAmount] = useState('10');
-
-  const togglePlugin = (id) => {
-    setSelectedPlugins((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
-    );
-  };
+  const [pair, setPair] = useState('BTC/USDT · 10 USDT');
+  const [frequency, setFrequency] = useState('每 15 分钟');
+  const [rounds, setRounds] = useState(3);
+  const [selectedMode, setSelectedMode] = useState('多数投票');
+  const [autoExecute, setAutoExecute] = useState(true);
+  const [stopLoss, setStopLoss] = useState(true);
+  const [stopLossPct, setStopLossPct] = useState('5');
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('提示', '请输入任务名称');
+      showAlert('提示', '请输入任务名称');
       return;
     }
     try {
@@ -55,18 +51,18 @@ export default function CreateTaskScreen({ navigation }) {
         status: 'draft',
         statusColor: '#AAAAAA',
         group: TEAMS.find(t => t.id === selectedTeam)?.name || '',
-        schedule: `Every ${intervalMin}m`,
+        schedule: frequency,
         teamId: selectedTeam,
-        pair,
-        intervalMin,
-        quoteAmount: amount,
-        prompt,
-        plugins: selectedPlugins,
-        model: selectedModel,
+        pair: pair.split('·')[0]?.trim() || 'BTC/USDT',
+        rounds,
+        mode: selectedMode,
+        autoExecute,
+        stopLoss,
+        stopLossPct,
       });
       navigation.goBack();
     } catch (e) {
-      Alert.alert('错误', e.message || '创建失败');
+      showAlert('错误', e.message || '创建失败');
     }
   };
 
@@ -75,127 +71,136 @@ export default function CreateTaskScreen({ navigation }) {
       {/* Nav */}
       <View style={styles.nav}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={[styles.navAction, { color: colors.primary }]}>取消</Text>
+          <Text style={styles.navAction}>取消</Text>
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>创建任务</Text>
+        <Text style={[styles.navTitle, { color: '#1F2329' }]}>创建任务</Text>
         <TouchableOpacity onPress={handleSave}>
-          <Text style={[styles.navAction, { color: colors.primary, fontWeight: '600' }]}>保存</Text>
+          <Text style={[styles.navAction, { fontWeight: '600' }]}>保存</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.form} showsVerticalScrollIndicator={false}>
-        {/* Name */}
+        {/* 任务名称 */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>名称</Text>
+          <Text style={styles.label}>任务名称</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-            placeholder="例如：BTC 15分钟 Debate"
-            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            placeholder="BTC 15分钟 Debate"
+            placeholderTextColor="#8F959E"
             value={name}
             onChangeText={setName}
           />
         </View>
 
-        {/* Team */}
+        {/* 关联团队 */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>关联分析群</Text>
-          <View style={styles.optionList}>
-            {TEAMS.map((t) => (
+          <Text style={styles.label}>关联团队</Text>
+          <TouchableOpacity style={styles.selectRow}>
+            <Text style={styles.selectValue}>{TEAMS.find(t => t.id === selectedTeam)?.name}</Text>
+            <ChevronRight size={18} color="#8F959E" />
+          </TouchableOpacity>
+        </View>
+
+        {/* 交易对 */}
+        <View style={styles.section}>
+          <Text style={styles.label}>交易对</Text>
+          <TouchableOpacity style={styles.selectRow}>
+            <Text style={styles.selectValue}>{pair}</Text>
+            <ChevronRight size={18} color="#8F959E" />
+          </TouchableOpacity>
+        </View>
+
+        {/* 执行频率 */}
+        <View style={styles.section}>
+          <Text style={styles.label}>执行频率</Text>
+          <TouchableOpacity style={styles.selectRow}>
+            <Text style={styles.selectValue}>{frequency}</Text>
+            <ChevronRight size={18} color="#8F959E" />
+          </TouchableOpacity>
+        </View>
+
+        {/* 辩论轮数 */}
+        <View style={styles.section}>
+          <Text style={styles.label}>辩论轮数</Text>
+          <View style={styles.counterRow}>
+            <TouchableOpacity
+              style={styles.counterBtn}
+              onPress={() => setRounds(Math.max(1, rounds - 1))}
+            >
+              <Minus size={18} color="#1F2329" />
+            </TouchableOpacity>
+            <View style={styles.counterValue}>
+              <Text style={styles.counterText}>{rounds} 轮</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.counterBtn}
+              onPress={() => setRounds(Math.min(10, rounds + 1))}
+            >
+              <Plus size={18} color="#1F2329" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 决策模式 */}
+        <View style={styles.section}>
+          <Text style={styles.label}>决策模式</Text>
+          <View style={styles.chipRow}>
+            {MODES.map((m) => (
               <TouchableOpacity
-                key={t.id}
-                style={[styles.optionRow, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
-                onPress={() => setSelectedTeam(t.id)}
+                key={m}
+                style={[styles.chip, selectedMode === m && styles.chipActive]}
+                onPress={() => setSelectedMode(m)}
               >
-                <Text style={[styles.optionText, { color: colors.textPrimary }]}>{t.name}</Text>
-                {selectedTeam === t.id && <Check size={18} color={colors.primary} />}
+                <Text style={[styles.chipText, selectedMode === m && styles.chipTextActive]}>{m}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Trading Pair + Interval + Amount */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>交易配置</Text>
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldHalf}>
-              <Text style={[styles.fieldLabel, { color: '#646A73' }]}>交易对</Text>
-              <TextInput
-                style={[styles.inputSmall, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-                value={pair}
-                onChangeText={setPair}
-              />
-            </View>
-            <View style={styles.fieldHalf}>
-              <Text style={[styles.fieldLabel, { color: '#646A73' }]}>间隔 (分钟)</Text>
-              <TextInput
-                style={[styles.inputSmall, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-                value={intervalMin}
-                onChangeText={setIntervalMin}
-                keyboardType="numeric"
-              />
-            </View>
+        {/* 自动执行交易 */}
+        <View style={styles.switchRow}>
+          <View style={styles.switchLeft}>
+            <Text style={styles.switchLabel}>自动执行交易</Text>
+            <Text style={styles.switchDesc}>达成共识后自动下单</Text>
           </View>
-          <View style={{ marginTop: 10 }}>
-            <Text style={[styles.fieldLabel, { color: '#646A73' }]}>单笔金额 (USDT)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
-
-        {/* System Prompt */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>系统提示词</Text>
-          <TextInput
-            style={[styles.textArea, { backgroundColor: colors.card, borderColor: colors.cardBorder, color: colors.textPrimary }]}
-            placeholder="你是一位专业的加密货币分析师..."
-            placeholderTextColor={colors.textMuted}
-            value={prompt}
-            onChangeText={setPrompt}
-            multiline
-            textAlignVertical="top"
+          <Switch
+            value={autoExecute}
+            onValueChange={setAutoExecute}
+            trackColor={{ false: '#E5E8ED', true: '#4E6EF260' }}
+            thumbColor={autoExecute ? '#4E6EF2' : '#ccc'}
           />
         </View>
 
-        {/* Plugins */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>插件绑定</Text>
-          <View style={styles.optionList}>
-            {PLUGINS.map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                style={[styles.optionRow, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
-                onPress={() => togglePlugin(p.id)}
-              >
-                <View style={styles.optionLeft}>
-                  <Text style={styles.optionIcon}>{p.icon}</Text>
-                  <Text style={[styles.optionText, { color: colors.textPrimary }]}>{p.name}</Text>
-                </View>
-                {selectedPlugins.includes(p.id) && <Check size={18} color={colors.primary} />}
-              </TouchableOpacity>
-            ))}
+        <View style={styles.divider} />
+
+        {/* 止损保护 */}
+        <View style={styles.switchRow}>
+          <View style={styles.switchLeft}>
+            <Text style={styles.switchLabel}>止损保护</Text>
+            <Text style={styles.switchDesc}>亏损超过比例自动平仓</Text>
           </View>
+          <Switch
+            value={stopLoss}
+            onValueChange={setStopLoss}
+            trackColor={{ false: '#E5E8ED', true: '#4E6EF260' }}
+            thumbColor={stopLoss ? '#4E6EF2' : '#ccc'}
+          />
         </View>
 
-        {/* Model */}
-        <View style={styles.section}>
-          <Text style={[styles.label, { color: '#646A73' }]}>模型</Text>
-          <View style={styles.optionList}>
-            {MODELS.map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.optionRow, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
-                onPress={() => setSelectedModel(m)}
-              >
-                <Text style={[styles.optionText, { color: colors.textPrimary }]}>{m}</Text>
-                {selectedModel === m && <Check size={18} color={colors.primary} />}
-              </TouchableOpacity>
-            ))}
+        {stopLoss && (
+          <View style={styles.inlineRow}>
+            <Text style={styles.inlineLabel}>止损比例</Text>
+            <View style={styles.inlineRight}>
+              <TextInput
+                style={styles.inlineInput}
+                value={stopLossPct}
+                onChangeText={setStopLossPct}
+                keyboardType="numeric"
+              />
+              <Text style={styles.inlineUnit}>%</Text>
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -203,24 +208,70 @@ export default function CreateTaskScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, height: 44 },
+  nav: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, height: 44,
+  },
   navTitle: { fontSize: 17, fontWeight: '600' },
-  navAction: { fontSize: 16 },
+  navAction: { fontSize: 16, color: '#4E6EF2' },
   form: { padding: 20, paddingTop: 16, gap: 24, paddingBottom: 40 },
   section: { gap: 8 },
-  label: { fontSize: 12, fontWeight: '500', letterSpacing: 1 },
-  input: { height: 48, borderRadius: 14, borderWidth: 1, paddingHorizontal: 16, fontSize: 15 },
-  inputSmall: { height: 44, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 14 },
-  textArea: { height: 140, borderRadius: 14, borderWidth: 1, padding: 16, fontSize: 14, lineHeight: 22 },
-  fieldRow: { flexDirection: 'row', gap: 12 },
-  fieldHalf: { flex: 1, gap: 6 },
-  fieldLabel: { fontSize: 12, fontWeight: '400' },
-  optionList: { gap: 8 },
-  optionRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, height: 48, borderRadius: 14, borderWidth: 1,
+  label: { fontSize: 12, fontWeight: '500', color: '#646A73', letterSpacing: 1 },
+  input: {
+    height: 48, borderRadius: 14, backgroundColor: '#F5F7FA',
+    borderWidth: 1, borderColor: '#E5E8ED', paddingHorizontal: 16,
+    fontSize: 15, color: '#1F2329',
   },
-  optionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  optionIcon: { fontSize: 18 },
-  optionText: { fontSize: 15, fontWeight: '500' },
+  selectRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, height: 48, borderRadius: 14,
+    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
+  },
+  selectValue: { fontSize: 15, color: '#1F2329' },
+
+  // Counter
+  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  counterBtn: {
+    width: 44, height: 44, borderRadius: 14, backgroundColor: '#F5F7FA',
+    borderWidth: 1, borderColor: '#E5E8ED', alignItems: 'center', justifyContent: 'center',
+  },
+  counterValue: {
+    flex: 1, height: 44, borderRadius: 14, backgroundColor: '#F5F7FA',
+    borderWidth: 1, borderColor: '#E5E8ED', alignItems: 'center', justifyContent: 'center',
+  },
+  counterText: { fontSize: 16, fontWeight: '600', color: '#1F2329' },
+
+  // Chips
+  chipRow: { flexDirection: 'row', gap: 8 },
+  chip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
+  },
+  chipActive: { backgroundColor: '#4E6EF2', borderColor: '#4E6EF2' },
+  chipText: { fontSize: 13, fontWeight: '500', color: '#646A73' },
+  chipTextActive: { color: '#FFFFFF' },
+
+  // Switch
+  switchRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  switchLeft: { flex: 1, gap: 2 },
+  switchLabel: { fontSize: 15, fontWeight: '500', color: '#1F2329' },
+  switchDesc: { fontSize: 12, color: '#8F959E' },
+  divider: { height: 1, backgroundColor: '#E5E8ED' },
+
+  // Inline row
+  inlineRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  inlineLabel: { fontSize: 14, color: '#646A73' },
+  inlineRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  inlineInput: {
+    width: 50, height: 36, borderRadius: 8, backgroundColor: '#F5F7FA',
+    borderWidth: 1, borderColor: '#E5E8ED', textAlign: 'center',
+    fontSize: 14, fontWeight: '600', color: '#1F2329',
+  },
+  inlineUnit: { fontSize: 14, color: '#646A73' },
 });

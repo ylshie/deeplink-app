@@ -15,6 +15,8 @@ import NotificationScreen from '../screens/NotificationScreen';
 import LanguageScreen from '../screens/LanguageScreen';
 import TradeDetailScreen from '../screens/TradeDetailScreen';
 import DebateDetailScreen from '../screens/DebateDetailScreen';
+import CreateAgentScreen from '../screens/CreateAgentScreen';
+import CreateTeamScreen from '../screens/CreateTeamScreen';
 import CustomTabBar from '../components/CustomTabBar';
 
 const Tab = createBottomTabNavigator();
@@ -51,6 +53,8 @@ export default function AppNavigator({ session, onLogout }) {
       <Stack.Screen name="Language" component={LanguageScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="TradeDetail" component={TradeDetailScreen} options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="DebateDetail" component={DebateDetailScreen} options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="CreateAgent" component={CreateAgentScreen} options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="CreateTeam" component={CreateTeamScreen} options={{ animation: 'slide_from_bottom' }} />
     </Stack.Navigator>
   );
 }

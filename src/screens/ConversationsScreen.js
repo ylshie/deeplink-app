@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Search, SquarePen, Trash2 } from 'lucide-react-native';
+import { Search, Plus, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents, getTeams, deleteAgent, deleteTeam } from '../api';
 import { getIcon } from '../components/IconMap';
@@ -135,8 +135,8 @@ export default function ConversationsScreen({ navigation }) {
           <TouchableOpacity>
             <Search size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <TouchableOpacity>
-            <SquarePen size={22} color={colors.textPrimary} />
+          <TouchableOpacity onPress={() => navigation.navigate(activeFilter === 'Teams' ? 'CreateTeam' : 'CreateAgent')}>
+            <Plus size={24} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
       </View>
