@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Search, SquarePen, Trash2 } from 'lucide-react-native';
+import { Search, Plus, Bell, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents, getTeams, deleteAgent, deleteTeam } from '../api';
 import { getIcon } from '../components/IconMap';
@@ -132,14 +132,17 @@ export default function ConversationsScreen({ navigation }) {
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>对话</Text>
         <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.headerBtn}>
-            <Search size={22} color={colors.textPrimary} />
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+            <Bell size={18} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.headerBtn}
+            style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
             onPress={() => navigation.navigate(activeFilter === 'Teams' ? 'CreateTeam' : 'CreateAgent')}
           >
-            <SquarePen size={22} color={colors.textPrimary} />
+            <Plus size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+            <Search size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -202,10 +205,15 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 10,
   },
-  headerBtn: {
-    padding: 4,
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterRow: {
     flexDirection: 'row',
