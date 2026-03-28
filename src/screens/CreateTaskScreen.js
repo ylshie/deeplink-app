@@ -20,6 +20,8 @@ const TEAMS = [
   { id: 'team-quant', name: '量化策略研究群' },
 ];
 
+const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'DOGE/USDT'];
+const FREQS = ['每 5 分钟', '每 15 分钟', '每 30 分钟', '每 1 小时', '每 4 小时', '每日'];
 const MODES = ['多数投票', '加权投票', '一票否决'];
 
 function showAlert(title, msg) {
@@ -31,7 +33,7 @@ export default function CreateTaskScreen({ navigation }) {
   const { colors } = useTheme();
   const [name, setName] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('team-btc');
-  const [pair, setPair] = useState('BTC/USDT · 10 USDT');
+  const [pair, setPair] = useState('BTC/USDT');
   const [frequency, setFrequency] = useState('每 15 分钟');
   const [rounds, setRounds] = useState(3);
   const [selectedMode, setSelectedMode] = useState('多数投票');
@@ -53,7 +55,7 @@ export default function CreateTaskScreen({ navigation }) {
         group: TEAMS.find(t => t.id === selectedTeam)?.name || '',
         schedule: frequency,
         teamId: selectedTeam,
-        pair: pair.split('·')[0]?.trim() || 'BTC/USDT',
+        pair,
         rounds,
         mode: selectedMode,
         autoExecute,
@@ -104,19 +106,25 @@ export default function CreateTaskScreen({ navigation }) {
         {/* 交易对 */}
         <View style={styles.section}>
           <Text style={styles.label}>交易对</Text>
-          <TouchableOpacity style={styles.selectRow}>
-            <Text style={styles.selectValue}>{pair}</Text>
-            <ChevronRight size={18} color="#8F959E" />
-          </TouchableOpacity>
+          <View style={styles.chipWrap}>
+            {PAIRS.map((p) => (
+              <TouchableOpacity key={p} style={[styles.selChip, pair === p && styles.selChipActive]} onPress={() => setPair(p)}>
+                <Text style={[styles.selChipText, pair === p && styles.selChipTextActive]}>{p}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* 执行频率 */}
         <View style={styles.section}>
           <Text style={styles.label}>执行频率</Text>
-          <TouchableOpacity style={styles.selectRow}>
-            <Text style={styles.selectValue}>{frequency}</Text>
-            <ChevronRight size={18} color="#8F959E" />
-          </TouchableOpacity>
+          <View style={styles.chipWrap}>
+            {FREQS.map((f) => (
+              <TouchableOpacity key={f} style={[styles.selChip, frequency === f && styles.selChipActive]} onPress={() => setFrequency(f)}>
+                <Text style={[styles.selChipText, frequency === f && styles.selChipTextActive]}>{f}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* 辩论轮数 */}
@@ -242,6 +250,14 @@ const styles = StyleSheet.create({
   counterText: { fontSize: 16, fontWeight: '600', color: '#1F2329' },
 
   // Chips
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  selChip: {
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
+  },
+  selChipActive: { backgroundColor: '#4E6EF2', borderColor: '#4E6EF2' },
+  selChipText: { fontSize: 13, fontWeight: '500', color: '#646A73' },
+  selChipTextActive: { color: '#FFFFFF' },
   chipRow: { flexDirection: 'row', gap: 8 },
   chip: {
     paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,

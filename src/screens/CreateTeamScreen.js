@@ -9,9 +9,11 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { Check, Plus, Minus } from 'lucide-react-native';
+import { Check, Plus } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { getAgents } from '../api';
+
+const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'DOGE/USDT'];
 
 function showAlert(title, msg) {
   if (Platform.OS === 'web') window.alert(msg ? `${title}: ${msg}` : title);
@@ -97,13 +99,17 @@ export default function CreateTeamScreen({ navigation }) {
         {/* 交易对 */}
         <View style={styles.section}>
           <Text style={styles.label}>目标交易对</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="BTC/USDT"
-            placeholderTextColor="#8F959E"
-            value={pair}
-            onChangeText={setPair}
-          />
+          <View style={styles.pairList}>
+            {PAIRS.map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[styles.pairChip, pair === p && styles.pairChipActive]}
+                onPress={() => setPair(p)}
+              >
+                <Text style={[styles.pairChipText, pair === p && styles.pairChipTextActive]}>{p}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* 选择 Agent */}
@@ -181,4 +187,12 @@ const styles = StyleSheet.create({
     width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#E5E8ED',
     alignItems: 'center', justifyContent: 'center',
   },
+  pairList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pairChip: {
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: '#F5F7FA', borderWidth: 1, borderColor: '#E5E8ED',
+  },
+  pairChipActive: { backgroundColor: '#4E6EF2', borderColor: '#4E6EF2' },
+  pairChipText: { fontSize: 14, fontWeight: '500', color: '#646A73' },
+  pairChipTextActive: { color: '#FFFFFF' },
 });
