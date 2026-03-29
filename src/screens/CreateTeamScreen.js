@@ -63,7 +63,7 @@ export default function CreateTeamScreen({ navigation }) {
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || undefined,
-          pair: selectedPair,
+          pair,
           agentIds: selectedAgentIds,
         }),
       });
