@@ -165,21 +165,25 @@ export default function ApiKeysScreen({ navigation }) {
   // ── Delete account ──
   const handleDeleteAccount = (acct) => {
     const doDelete = async () => {
-      if (acct.id === 'legacy-binance') {
-        // Legacy: remove from AsyncStorage + server
+      try {
+        // Always clear local credential + server binanceToken
         await AsyncStorage.removeItem(STORAGE_KEY);
-        try {
-          const sess = await AsyncStorage.getItem(SESSION_KEY);
-          if (sess) {
-            const { token: sessToken } = JSON.parse(sess);
+        const sess = await AsyncStorage.getItem(SESSION_KEY);
+        if (sess) {
+          const { token: sessToken } = JSON.parse(sess);
+          if (acct.type === 'real') {
             await fetch(`${API_BASE_URL}/user/binance/disconnect`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
-            });
+            }).catch(() => {});
           }
-        } catch { /* */ }
-      } else {
-        await deleteAccount(acct.id);
+        }
+        // Delete account record on server
+        if (acct.id !== 'legacy-binance') {
+          await deleteAccount(acct.id);
+        }
+      } catch (e) {
+        showAlert('错误', e.message || '删除失败');
       }
       loadAccounts();
     };

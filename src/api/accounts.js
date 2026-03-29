@@ -32,9 +32,12 @@ export async function createAccount(data) {
 
 export async function deleteAccount(accountId) {
   const token = await getToken();
+  if (!token) throw new Error('未登录');
   const res = await fetch(`${API_BASE_URL}/user/accounts/${accountId}`, {
     method: 'DELETE',
     headers: { 'x-session-token': token },
   });
-  return res.json();
+  const result = await res.json();
+  if (!res.ok || result.error) throw new Error(result.error || `Server ${res.status}`);
+  return result;
 }
