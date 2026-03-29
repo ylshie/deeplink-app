@@ -101,7 +101,6 @@ export default function TasksScreen({ navigation }) {
   };
 
   const handleDeleteTask = async (task) => {
-    if (task.builtin) return;
     if (Platform.OS === 'web') {
       if (!window.confirm(`确认删除「${task.name}」？`)) return;
       await deleteTask(task.id);
@@ -170,7 +169,7 @@ export default function TasksScreen({ navigation }) {
         >
           {tasks.map((task) => {
             const isRunning = autoStatus[task.id] === 'running';
-            const canDelete = !task.builtin && !isRunning;
+            const canDelete = !isRunning;
             return (
               <View
                 key={task.id}
