@@ -45,7 +45,7 @@ LoginScreen（邮箱验证码登录）
       └── 非内置: 🗑 删除
 
 任务 tab
-  ├── ＋ → CreateTaskScreen（名称/团队下拉/交易对下拉/频率下拉/轮数/模式/自动执行/止损）
+  ├── ＋ → CreateTaskScreen（名称/团队/交易对/频率/账户选择/轮数/模式/自动执行/止损）
   ├── 卡片操作行: 运行|编辑|删除
   └── Tap → TaskDetailScreen
        ├── 历史 tab → Tap → DebateDetailScreen（Agent 完整意见 + 投票）
@@ -55,7 +55,7 @@ LoginScreen（邮箱验证码登录）
 
 我的 tab
   ├── Binance 交易账户（真实余额 USDT/持仓/交易数）
-  ├── API 密钥管理 → ApiKeysScreen（验证/连接/查看余额/断开）
+  ├── 账户管理 → ApiKeysScreen（多账户列表/连接 Binance/新增模拟账户/删除）
   ├── 通知设置 → NotificationScreen（5 项开关，同步 server）
   ├── 语言 → LanguageScreen（简体/繁体/English，即时切换）
   ├── 外观模式（跟随系统/浅色/深色）
@@ -83,12 +83,18 @@ LoginScreen（邮箱验证码登录）
 - 点击通知自动打开 App 并跳转对应页面（交易信号 → TaskDetail，警报/日报 → Notifications）
 - 支持 App 在前台、后台、被杀掉三种状态下的通知响应
 
-### 真实 Binance 交易
+### 多账户管理（真实 + 模拟）
 
-- 连接真实 Binance API Key（AES-256-GCM 加密）
-- 余额从 Binance 实时拉取（USDT + 各币种持仓）
-- 自动交易下真实市价单（默认 10 USDT/笔）
-- 持仓感知：已持仓时不重复买入，无持仓时不卖出
+支持多个交易账户，创建任务时选择使用哪个账户：
+
+| 账户类型 | 说明 |
+|---------|------|
+| 真实 Binance | 连接 API Key（AES-256-GCM 加密），真实余额 + 真实市价单 |
+| 模拟账户 | 用户设定初始 USDT 金额，使用真实市场价格虚拟交易 |
+
+- 账户管理页面：列表显示所有账户（类型标签 + 名称 + 余额）+ 新增/删除
+- 旧版 Binance credential 自动迁移为 account 记录
+- 模拟交易使用 `data/market/prices.json` 的实时价格，虚拟余额存储在 `users.json`
 - 查看 Binance 真实成交记录：`GET /api/trading/orders/:symbol`
 
 ### 自动交易引擎
@@ -138,7 +144,7 @@ Server 端运行，不需停留在画面：
 
 | 数据 | 存储位置 | 说明 |
 |------|----------|------|
-| 用户任务/设置/密钥 | Server `data/users.json` | 跨设备同步 |
+| 用户任务/设置/账户/密钥 | Server `data/users.json` | 跨设备同步 |
 | 自动交易信号 | Server `data/signals.json` | 重启不丢失，最多 500 条 |
 | AI 用量日志 | Server `data/ai-usage.json` | 最多 5000 条 |
 | 市场数据 | Server `data/market/*.json` | 6 个 fetcher 定时更新 |
@@ -176,7 +182,10 @@ Server 端运行，不需停留在画面：
 | `DELETE` | `/api/user/tasks/:id` | 删除自定义任务 |
 | `GET` | `/api/user/settings` | 用户设置（主题/语言/通知） |
 | `PUT` | `/api/user/settings` | 更新设置 |
-| `POST` | `/api/user/binance/connect` | 存储 Binance 加密 token |
+| `GET` | `/api/user/accounts` | 列出所有账户（真实 + 模拟） |
+| `POST` | `/api/user/accounts` | 创建账户（real: 带 token / simulated: 带 initialBalance） |
+| `DELETE` | `/api/user/accounts/:id` | 删除账户 |
+| `POST` | `/api/user/binance/connect` | 存储 Binance 加密 token（兼容旧版 + 自动建 account） |
 | `POST` | `/api/user/binance/disconnect` | 移除 Binance token |
 
 ### Credentials
@@ -211,7 +220,7 @@ Server 端运行，不需停留在画面：
 | `POST` | `/api/trading/ai-execute` | 单次 AI 辩论 → 可选自动执行 |
 | `GET` | `/api/trading/orders/:symbol` | Binance 真实成交记录 |
 | `GET` | `/api/trading/signals/:taskId` | 任务信号历史（全部，含 votes） |
-| `POST` | `/api/trading/auto/start` | 启动 server 端自动交易 |
+| `POST` | `/api/trading/auto/start` | 启动自动交易（支持 accountId + email 指定账户） |
 | `POST` | `/api/trading/auto/stop` | 暂停自动交易 |
 | `GET` | `/api/trading/auto/status/:taskId` | 任务状态 + 全部信号 |
 | `POST` | `/api/trading/auto/clear` | 清除信号 |
@@ -244,6 +253,7 @@ deeplink-app/
 │   │   ├── chat.js                     #   getTeamChat/AgentChat + send
 │   │   ├── tasks.js                    #   getTasks/addTask/deleteTask（server 端）
 │   │   ├── settings.js                 #   getSettings/updateSettings（server 端）
+│   │   ├── accounts.js                 #   getAccounts/createAccount/deleteAccount
 │   │   └── profile.js                  #   getProfile
 │   ├── i18n/                           # 多语言
 │   │   ├── index.js                    #   I18nProvider + useI18n()
@@ -272,9 +282,9 @@ deeplink-app/
 │   │   ├── TaskDetailScreen.js         #   任务详情（历史/交易/配置）
 │   │   ├── DebateDetailScreen.js       #   分析详情（Agent 意见 + 投票）
 │   │   ├── TradeDetailScreen.js        #   交易详情（订单 + 投票）
-│   │   ├── CreateTaskScreen.js         #   创建任务（下拉选 + 开关）
+│   │   ├── CreateTaskScreen.js         #   创建任务（下拉选 + 账户选择 + 开关）
 │   │   ├── ProfileScreen.js            #   我的（真实 Binance 余额）
-│   │   ├── ApiKeysScreen.js            #   Binance 密钥管理
+│   │   ├── ApiKeysScreen.js            #   账户管理（多账户 + 模拟账户）
 │   │   ├── NotificationScreen.js       #   通知设置（同步 server）
 │   │   └── LanguageScreen.js           #   语言切换
 │   └── theme/
