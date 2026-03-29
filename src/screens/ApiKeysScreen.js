@@ -113,22 +113,18 @@ export default function ApiKeysScreen({ navigation }) {
         displayKey, token: result.token, connected: true, savedAt: new Date().toISOString(),
       }));
 
-      // Create account on server + sync binance token
-      try {
-        await createAccount({ type: 'real', name: `Binance (${displayKey})`, token: result.token });
-      } catch (e) {
-        // Fallback: try old binance/connect endpoint
-        try {
-          const sess = await AsyncStorage.getItem(SESSION_KEY);
-          if (sess) {
-            const { token: sessToken } = JSON.parse(sess);
-            await fetch(`${API_BASE_URL}/user/binance/connect`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
-              body: JSON.stringify({ token: result.token }),
-            });
-          }
-        } catch { /* */ }
+      // Sync binance token to server (always, so migration works)
+      const sess = await AsyncStorage.getItem(SESSION_KEY);
+      if (sess) {
+        const { token: sessToken } = JSON.parse(sess);
+        // Old endpoint — ensures binanceToken is set on server
+        await fetch(`${API_BASE_URL}/user/binance/connect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
+          body: JSON.stringify({ token: result.token }),
+        }).catch(() => {});
+        // New endpoint — create account record
+        await createAccount({ type: 'real', name: `Binance (${displayKey})`, token: result.token }).catch(() => {});
       }
 
       setAddingType(null);
