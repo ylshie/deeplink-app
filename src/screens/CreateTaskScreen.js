@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { Minus, Plus, ChevronDown, Check } from 'lucide-react-native';
 import { useTheme } from '../theme';
 import { addTask } from '../api';
+import { getAccounts } from '../api/accounts';
 
 const TEAMS = [
   { id: 'team-btc', name: 'BTC 多维分析团队' },
@@ -40,11 +41,23 @@ export default function CreateTaskScreen({ navigation }) {
   const [showPairPicker, setShowPairPicker] = useState(false);
   const [showFreqPicker, setShowFreqPicker] = useState(false);
   const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [rounds, setRounds] = useState(3);
   const [selectedMode, setSelectedMode] = useState('多数投票');
   const [autoExecute, setAutoExecute] = useState(true);
   const [stopLoss, setStopLoss] = useState(true);
   const [stopLossPct, setStopLossPct] = useState('5');
+
+  useEffect(() => {
+    getAccounts().then((accts) => {
+      setAccounts(accts);
+      if (accts.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(accts[0].id);
+      }
+    }).catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -66,6 +79,7 @@ export default function CreateTaskScreen({ navigation }) {
         autoExecute,
         stopLoss,
         stopLossPct,
+        accountId: selectedAccountId,
       });
       navigation.goBack();
     } catch (e) {
@@ -124,6 +138,28 @@ export default function CreateTaskScreen({ navigation }) {
             <Text style={styles.selectValue}>{frequency}</Text>
             <ChevronDown size={18} color="#8F959E" />
           </TouchableOpacity>
+        </View>
+
+        {/* 交易账户 */}
+        <View style={styles.section}>
+          <Text style={styles.label}>交易账户</Text>
+          {accounts.length > 0 ? (
+            <TouchableOpacity style={styles.selectRow} onPress={() => setShowAccountPicker(true)}>
+              <Text style={styles.selectValue}>
+                {(() => {
+                  const acct = accounts.find(a => a.id === selectedAccountId);
+                  if (!acct) return '请选择账户';
+                  return `${acct.type === 'real' ? '🔶' : '📊'} ${acct.name}`;
+                })()}
+              </Text>
+              <ChevronDown size={18} color="#8F959E" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.selectRow, { borderColor: '#FFD60A' }]} onPress={() => navigation.navigate('ApiKeys')}>
+              <Text style={[styles.selectValue, { color: '#FF9500' }]}>暂无账户，去创建</Text>
+              <ChevronDown size={18} color="#FF9500" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 辩论轮数 */}
@@ -234,6 +270,14 @@ export default function CreateTaskScreen({ navigation }) {
         selected={frequency}
         onSelect={(key) => { setFrequency(key); setShowFreqPicker(false); }}
         onClose={() => setShowFreqPicker(false)}
+      />
+      <PickerModal
+        visible={showAccountPicker}
+        title="选择交易账户"
+        options={accounts.map(a => ({ key: a.id, label: `${a.type === 'real' ? '🔶 ' : '📊 '}${a.name}` }))}
+        selected={selectedAccountId}
+        onSelect={(key) => { setSelectedAccountId(key); setShowAccountPicker(false); }}
+        onClose={() => setShowAccountPicker(false)}
       />
     </View>
   );

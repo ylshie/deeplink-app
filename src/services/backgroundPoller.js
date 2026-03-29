@@ -65,12 +65,14 @@ async function poll() {
         sendLocalNotification(
           `${side} ${latest.pair || 'BTC/USDT'}`,
           latest.trade || `${action} @ $${latest.entryPrice}`,
+          { screen: 'TaskDetail', params: { id: task.taskId, name: task.taskId } },
         );
       } else if (!isTradeExec && notifSettings?.signal !== false) {
         // Analysis signal notification
         sendLocalNotification(
           `${action} ${latest.confidence || 0}% — ${latest.pair || 'BTC/USDT'}`,
           latest.summary || '新的分析信号',
+          { screen: 'TaskDetail', params: { id: task.taskId, name: task.taskId } },
         );
       }
     }
@@ -88,7 +90,12 @@ async function poll() {
         const serverNotifs = await res.json();
         for (const n of serverNotifs) {
           if (n.timestamp <= lastSeenTimestamp) continue;
-          sendLocalNotification(n.title, n.body);
+          // Map server notification type to screen
+          const notifData = n.type === 'priceAlert' ? { screen: 'Notifications' }
+            : n.type === 'risk' ? { screen: 'Notifications' }
+            : n.type === 'dailyReport' ? { screen: 'Notifications' }
+            : { screen: 'Notifications' };
+          sendLocalNotification(n.title, n.body, notifData);
           lastSeenTimestamp = Math.max(lastSeenTimestamp, n.timestamp);
           await AsyncStorage.setItem(LAST_SEEN_KEY, String(lastSeenTimestamp));
         }

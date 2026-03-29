@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,14 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { ChevronLeft, Eye, EyeOff, Trash2, Plus, Check } from 'lucide-react-native';
+import { ChevronLeft, Eye, EyeOff, Trash2, Plus, Check, Wallet, BarChart3 } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
+import { getAccounts, createAccount, deleteAccount } from '../api/accounts';
 
-const STORAGE_KEY = '@deeplink_binance_credentials';
 const SESSION_KEY = '@deeplink_session';
+const STORAGE_KEY = '@deeplink_binance_credentials';
 
 function showAlert(title, msg) {
   if (Platform.OS === 'web') window.alert(msg ? `${title}: ${msg}` : title);
@@ -25,132 +26,175 @@ function showAlert(title, msg) {
 
 export default function ApiKeysScreen({ navigation }) {
   const { colors } = useTheme();
-  const [savedKey, setSavedKey] = useState(null); // { displayKey, token, connected }
+  const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
+  const [addingType, setAddingType] = useState(null); // null | 'real' | 'simulated'
   const [validating, setValidating] = useState(false);
+
+  // Real account form
   const [newKey, setNewKey] = useState('');
   const [newSecret, setNewSecret] = useState('');
   const [showSecret, setShowSecret] = useState(false);
 
-  // Load saved credential on mount
-  useEffect(() => {
-    (async () => {
+  // Simulated account form
+  const [simName, setSimName] = useState('');
+  const [simBalance, setSimBalance] = useState('10000');
+
+  const loadAccounts = useCallback(async () => {
+    try {
+      let accts = await getAccounts();
+
+      // Migrate: if server has no accounts but local has old Binance credential, push it up
+      if ((!accts || accts.length === 0)) {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const cred = JSON.parse(stored);
+          if (cred.connected && cred.token) {
+            try {
+              await createAccount({
+                type: 'real',
+                name: `Binance (${cred.displayKey || '****'})`,
+                token: cred.token,
+              });
+              // Re-fetch after migration
+              accts = await getAccounts();
+            } catch { /* */ }
+          }
+        }
+      }
+
+      setAccounts(accts || []);
+    } catch {
+      // Server unreachable — show local credential as fallback
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
-          setSavedKey(JSON.parse(stored));
+          const cred = JSON.parse(stored);
+          if (cred.connected && cred.token) {
+            setAccounts([{
+              id: 'legacy-binance',
+              type: 'real',
+              name: `Binance (${cred.displayKey || '****'})`,
+              hasToken: true,
+            }]);
+          }
         }
       } catch { /* */ }
-      setLoading(false);
-    })();
+    }
+    setLoading(false);
   }, []);
 
-  const handleValidateAndSave = async () => {
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+
+  // ── Real account: validate and connect ──
+  const handleConnectReal = async () => {
     if (!newKey.trim() || !newSecret.trim()) {
       showAlert('提示', '请填写 API Key 和 Secret Key');
       return;
     }
-
     setValidating(true);
     try {
+      // Validate on server
       const res = await fetch(`${API_BASE_URL}/credentials/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: newKey.trim(), apiSecret: newSecret.trim() }),
       });
-
       const result = await res.json();
-
       if (!result.valid) {
-        showAlert('验证失败', result.error || '无法连接到 Binance，请检查密钥是否正确');
+        showAlert('验证失败', result.error || '无法连接到 Binance');
         return;
       }
 
-      // Save encrypted token + display info locally
-      const credential = {
-        displayKey: newKey.trim().slice(0, 4) + '····' + newKey.trim().slice(-4),
-        token: result.token,
-        connected: true,
-        balances: result.balances,
-        savedAt: new Date().toISOString(),
-      };
+      const displayKey = newKey.trim().slice(0, 4) + '····' + newKey.trim().slice(-4);
 
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(credential));
+      // Save locally
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+        displayKey, token: result.token, connected: true, savedAt: new Date().toISOString(),
+      }));
 
-      // Also save to server (per-user, so other devices can see)
+      // Create account on server + sync binance token
       try {
-        const sess = await AsyncStorage.getItem(SESSION_KEY);
-        if (sess) {
-          const { token: sessToken } = JSON.parse(sess);
-          await fetch(`${API_BASE_URL}/user/binance/connect`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
-            body: JSON.stringify({ token: result.token }),
-          });
-        }
-      } catch { /* */ }
+        await createAccount({ type: 'real', name: `Binance (${displayKey})`, token: result.token });
+      } catch (e) {
+        // Fallback: try old binance/connect endpoint
+        try {
+          const sess = await AsyncStorage.getItem(SESSION_KEY);
+          if (sess) {
+            const { token: sessToken } = JSON.parse(sess);
+            await fetch(`${API_BASE_URL}/user/binance/connect`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
+              body: JSON.stringify({ token: result.token }),
+            });
+          }
+        } catch { /* */ }
+      }
 
-      setSavedKey(credential);
-      setAdding(false);
+      setAddingType(null);
       setNewKey('');
       setNewSecret('');
-
-      const assetCount = Object.keys(result.balances || {}).length;
-      showAlert('连接成功', `Binance 账户已连接，检测到 ${assetCount} 种资产`);
+      loadAccounts();
+      showAlert('连接成功', 'Binance 账户已连接');
     } catch (err) {
-      showAlert('错误', err.message || '网络连接失败');
+      showAlert('错误', err.message);
     } finally {
       setValidating(false);
     }
   };
 
-  const doDisconnect = async () => {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-    // Also disconnect on server
+  // ── Simulated account ──
+  const handleCreateSimulated = async () => {
+    const name = simName.trim() || '模拟账户';
+    const balance = parseFloat(simBalance) || 10000;
+    if (balance <= 0) {
+      showAlert('提示', '请输入有效的初始金额');
+      return;
+    }
+    setValidating(true);
     try {
-      const sess = await AsyncStorage.getItem(SESSION_KEY);
-      if (sess) {
-        const { token: sessToken } = JSON.parse(sess);
-        await fetch(`${API_BASE_URL}/user/binance/disconnect`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
-        });
-      }
-    } catch { /* */ }
-    setSavedKey(null);
-  };
-
-  const handleDelete = async () => {
-    if (Platform.OS === 'web') {
-      if (!window.confirm('确认断开 Binance 连接？')) return;
-      await doDisconnect();
-    } else {
-      Alert.alert('确认断开', '将删除保存的加密密钥，不影响 Binance 账户', [
-        { text: '取消', style: 'cancel' },
-        { text: '断开', style: 'destructive', onPress: doDisconnect },
-      ]);
+      await createAccount({ type: 'simulated', name, initialBalance: balance });
+      setAddingType(null);
+      setSimName('');
+      setSimBalance('10000');
+      loadAccounts();
+      showAlert('创建成功', `模拟账户「${name}」已创建，初始余额 $${balance.toLocaleString()}`);
+    } catch (err) {
+      showAlert('错误', err.message);
+    } finally {
+      setValidating(false);
     }
   };
 
-  const handleCheckBalance = async () => {
-    if (!savedKey?.token) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/credentials/balance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: savedKey.token }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
-      const lines = [`USDT: ${data.usdt?.toFixed(2) || 0}`];
-      (data.assets || []).forEach(a => {
-        lines.push(`${a.asset}: ${a.quantity.toFixed(6)} ($${a.value.toFixed(2)})`);
-      });
-      lines.push(`\n总估值: $${data.totalValue?.toFixed(2) || 0}`);
-      showAlert('账户余额', lines.join('\n'));
-    } catch (err) {
-      showAlert('错误', err.message);
+  // ── Delete account ──
+  const handleDeleteAccount = (acct) => {
+    const doDelete = async () => {
+      if (acct.id === 'legacy-binance') {
+        // Legacy: remove from AsyncStorage + server
+        await AsyncStorage.removeItem(STORAGE_KEY);
+        try {
+          const sess = await AsyncStorage.getItem(SESSION_KEY);
+          if (sess) {
+            const { token: sessToken } = JSON.parse(sess);
+            await fetch(`${API_BASE_URL}/user/binance/disconnect`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-session-token': sessToken },
+            });
+          }
+        } catch { /* */ }
+      } else {
+        await deleteAccount(acct.id);
+      }
+      loadAccounts();
+    };
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`确认删除「${acct.name}」？`)) return;
+      doDelete();
+    } else {
+      Alert.alert('确认删除', `将删除「${acct.name}」`, [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: doDelete },
+      ]);
     }
   };
 
@@ -168,49 +212,71 @@ export default function ApiKeysScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ChevronLeft size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>API 密钥管理</Text>
+        <Text style={[styles.navTitle, { color: colors.textPrimary }]}>账户管理</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Saved key card */}
-        {savedKey && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+        {/* Account list */}
+        {accounts.map((acct) => (
+          <View key={acct.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <View style={styles.cardHeader}>
               <View style={styles.cardLeft}>
-                <Text style={styles.exchangeIcon}>🔶</Text>
+                <Text style={styles.exchangeIcon}>{acct.type === 'real' ? '🔶' : '📊'}</Text>
                 <View>
-                  <Text style={[styles.exchangeName, { color: colors.textPrimary }]}>Binance</Text>
-                  <Text style={[styles.keyPreview, { color: colors.textSecondary }]}>{savedKey.displayKey}</Text>
+                  <Text style={[styles.exchangeName, { color: colors.textPrimary }]}>{acct.name}</Text>
+                  <Text style={[styles.keyPreview, { color: colors.textSecondary }]}>
+                    {acct.type === 'real' ? '真实账户' : `模拟 · 初始 $${(acct.initialBalance || 0).toLocaleString()}`}
+                  </Text>
                 </View>
               </View>
-              <View style={styles.connBadge}>
-                <Check size={12} color="#34C759" />
-                <Text style={styles.connText}>已连接</Text>
+              <View style={[styles.typeBadge, { backgroundColor: acct.type === 'real' ? '#E8F8EE' : '#FFF8E1' }]}>
+                {acct.type === 'real' ? <Check size={12} color="#34C759" /> : <BarChart3 size={12} color="#FF9500" />}
+                <Text style={[styles.typeText, { color: acct.type === 'real' ? '#34C759' : '#FF9500' }]}>
+                  {acct.type === 'real' ? '真实' : '模拟'}
+                </Text>
               </View>
             </View>
+
+            {/* Simulated account balance */}
+            {acct.type === 'simulated' && acct.balance && (
+              <View style={[styles.balanceRow, { borderTopColor: colors.divider }]}>
+                <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>USDT 余额</Text>
+                <Text style={[styles.balanceValue, { color: colors.textPrimary }]}>${(acct.balance.usdt || 0).toFixed(2)}</Text>
+                {(acct.balance.assets || []).length > 0 && (
+                  <>
+                    <Text style={[styles.balanceLabel, { color: colors.textSecondary, marginLeft: 16 }]}>持仓</Text>
+                    <Text style={[styles.balanceValue, { color: colors.textPrimary }]}>{acct.balance.assets.length} 种</Text>
+                  </>
+                )}
+              </View>
+            )}
+
             <View style={[styles.cardActions, { borderTopColor: colors.divider }]}>
-              <TouchableOpacity style={styles.cardAction} onPress={handleCheckBalance}>
-                <Eye size={16} color={colors.primary} />
-                <Text style={[styles.actionText, { color: colors.primary }]}>查看余额</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.cardAction} onPress={handleDelete}>
+              <TouchableOpacity style={styles.cardAction} onPress={() => handleDeleteAccount(acct)}>
                 <Trash2 size={16} color="#F54A45" />
-                <Text style={[styles.actionText, { color: '#F54A45' }]}>断开连接</Text>
+                <Text style={[styles.actionText, { color: '#F54A45' }]}>删除</Text>
               </TouchableOpacity>
             </View>
           </View>
+        ))}
+
+        {/* Add buttons */}
+        {!addingType && (
+          <View style={styles.addButtons}>
+            <TouchableOpacity style={[styles.addBtn, { borderColor: colors.cardBorder }]} onPress={() => setAddingType('real')}>
+              <Wallet size={18} color={colors.primary} />
+              <Text style={[styles.addBtnText, { color: colors.primary }]}>连接 Binance</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.addBtn, { borderColor: '#FFD60A' }]} onPress={() => setAddingType('simulated')}>
+              <BarChart3 size={18} color="#FF9500" />
+              <Text style={[styles.addBtnText, { color: '#FF9500' }]}>新增模拟账户</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* Add form */}
-        {!savedKey && !adding && (
-          <TouchableOpacity style={[styles.addBtn, { borderColor: colors.cardBorder }]} onPress={() => setAdding(true)}>
-            <Plus size={18} color={colors.primary} />
-            <Text style={[styles.addBtnText, { color: colors.primary }]}>连接 Binance 账户</Text>
-          </TouchableOpacity>
-        )}
-
-        {adding && (
+        {/* Real account form */}
+        {addingType === 'real' && (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <View style={styles.formHeader}>
               <Text style={styles.formIcon}>🔶</Text>
@@ -252,20 +318,65 @@ export default function ApiKeysScreen({ navigation }) {
             <View style={styles.formButtons}>
               <TouchableOpacity
                 style={[styles.cancelBtn, { borderColor: colors.cardBorder }]}
-                onPress={() => { setAdding(false); setNewKey(''); setNewSecret(''); }}
+                onPress={() => { setAddingType(null); setNewKey(''); setNewSecret(''); }}
               >
                 <Text style={[styles.cancelText, { color: colors.textSecondary }]}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.saveBtn, validating && { opacity: 0.6 }]}
-                onPress={handleValidateAndSave}
+                onPress={handleConnectReal}
                 disabled={validating}
               >
-                {validating ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.saveText}>验证并连接</Text>
-                )}
+                {validating ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveText}>验证并连接</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Simulated account form */}
+        {addingType === 'simulated' && (
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+            <View style={styles.formHeader}>
+              <Text style={styles.formIcon}>📊</Text>
+              <Text style={[styles.formTitle, { color: colors.textPrimary }]}>新增模拟账户</Text>
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={[styles.fieldLabel, { color: '#646A73' }]}>账户名称</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder, color: colors.textPrimary }]}
+                placeholder="例如：测试策略"
+                placeholderTextColor={colors.textMuted}
+                value={simName}
+                onChangeText={setSimName}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={[styles.fieldLabel, { color: '#646A73' }]}>初始 USDT 金额</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder, color: colors.textPrimary }]}
+                placeholder="10000"
+                placeholderTextColor={colors.textMuted}
+                value={simBalance}
+                onChangeText={setSimBalance}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={styles.formButtons}>
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: colors.cardBorder }]}
+                onPress={() => { setAddingType(null); setSimName(''); setSimBalance('10000'); }}
+              >
+                <Text style={[styles.cancelText, { color: colors.textSecondary }]}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: '#FF9500' }, validating && { opacity: 0.6 }]}
+                onPress={handleCreateSimulated}
+                disabled={validating}
+              >
+                {validating ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.saveText}>创建</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -273,9 +384,9 @@ export default function ApiKeysScreen({ navigation }) {
 
         {/* Security hint */}
         <View style={[styles.hintBox, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.hintTitle, { color: colors.textPrimary }]}>安全说明</Text>
+          <Text style={[styles.hintTitle, { color: colors.textPrimary }]}>说明</Text>
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            {'• 密钥在发送到服务器验证后会被 AES-256-GCM 加密\n• 服务器不存储原始密钥，仅在需要时解密使用\n• 加密后的 token 保存在你的设备本地\n• 建议在 Binance 设置为「只读 + 现货交易」权限'}
+            {'• 真实账户：密钥经 AES-256-GCM 加密，服务器不存储原始密钥\n• 模拟账户：使用真实市场价格，虚拟余额交易，不产生真实订单\n• 创建任务时可选择使用哪个账户'}
           </Text>
         </View>
       </ScrollView>
@@ -295,12 +406,16 @@ const styles = StyleSheet.create({
   exchangeIcon: { fontSize: 28 },
   exchangeName: { fontSize: 16, fontWeight: '600' },
   keyPreview: { fontSize: 13, marginTop: 2 },
-  connBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E8F8EE', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  connText: { fontSize: 12, fontWeight: '500', color: '#34C759' },
+  typeBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  typeText: { fontSize: 12, fontWeight: '500' },
+  balanceRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1 },
+  balanceLabel: { fontSize: 12, marginRight: 6 },
+  balanceValue: { fontSize: 14, fontWeight: '600' },
   cardActions: { flexDirection: 'row', borderTopWidth: 1 },
   cardAction: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
   actionText: { fontSize: 13, fontWeight: '500' },
 
+  addButtons: { gap: 12 },
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', gap: 8 },
   addBtnText: { fontSize: 15, fontWeight: '500' },
 

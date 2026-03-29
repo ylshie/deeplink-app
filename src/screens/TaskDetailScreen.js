@@ -14,6 +14,7 @@ import {
   Play,
   Pause,
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme';
 import { API_BASE_URL } from '../api/config';
 import { formatTime, formatDateTime } from '../utils/formatTime';
@@ -22,7 +23,7 @@ const tabs = ['历史', '交易', '配置'];
 
 export default function TaskDetailScreen({ navigation, route }) {
   const { colors } = useTheme();
-  const { id, name } = route?.params || {};
+  const { id, name, accountId, teamId: routeTeamId } = route?.params || {};
   const displayName = name || 'BTC 15min Debate';
   const [activeTab, setActiveTab] = useState('历史');
   const [signals, setSignals] = useState([]);
@@ -41,7 +42,7 @@ export default function TaskDetailScreen({ navigation, route }) {
   const pollRef = React.useRef(null);
 
   const taskTeamMap = { 'task-1': 'team-btc', 'task-2': 'team-eth-arb', 'task-3': 'team-quant' };
-  const teamId = taskTeamMap[id] || 'team-btc';
+  const teamId = routeTeamId || taskTeamMap[id] || 'team-btc';
 
   useEffect(() => {
     (async () => {
@@ -85,6 +86,13 @@ export default function TaskDetailScreen({ navigation, route }) {
   const handleStart = async () => {
     setError(null);
     try {
+      // Get email from session for account resolution
+      let email = null;
+      try {
+        const sess = await AsyncStorage.getItem('@deeplink_session');
+        if (sess) email = JSON.parse(sess).email;
+      } catch { /* */ }
+
       const res = await fetch(`${API_BASE_URL}/trading/auto/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,6 +102,8 @@ export default function TaskDetailScreen({ navigation, route }) {
           autoExecute: true,
           quoteAmount: parseInt(config.quoteAmount) || 10,
           intervalMs: (parseInt(config.intervalMin) || 15) * 60 * 1000,
+          accountId: accountId || null,
+          email,
         }),
       });
       if (!res.ok) throw new Error(`Server ${res.status}`);
@@ -190,9 +200,55 @@ export default function TaskDetailScreen({ navigation, route }) {
 
   const renderTrades = () => {
     const executed = signals.filter(isTradeExecution);
-    const totalSpent = executed.reduce((s, t) => s + (t.quoteAmount || 0), 0);
-    const buyCount = executed.filter(t => ['BUY', 'EXECUTE'].includes(t.action)).length;
-    const sellCount = executed.filter(t => t.action === 'SELL').length;
+
+    // Calculate P&L using FIFO — sort by time ascending for correct matching
+    const sorted = [...executed].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    const buyQueue = []; // [{ price, qty, id }]
+    let totalPnl = 0;
+    let winCount = 0;
+    let roundTrips = 0;
+    const pendingBuyIds = new Set();
+
+    // First pass: mark all buys as pending
+    for (const sig of sorted) {
+      if (['BUY', 'EXECUTE'].includes(sig.action)) pendingBuyIds.add(sig.id);
+    }
+
+    // Second pass: FIFO match (oldest first)
+    for (const sig of sorted) {
+      const price = sig.entryPrice || 0;
+      const amount = sig.quoteAmount || 0;
+      if (['BUY', 'EXECUTE'].includes(sig.action)) {
+        const qty = price > 0 ? amount / price : 0;
+        if (qty > 0) buyQueue.push({ price, qty, id: sig.id });
+      } else if (sig.action === 'SELL') {
+        let sellQty = price > 0 ? amount / price : 0;
+        let pnl = 0;
+        let matched = false;
+        while (sellQty > 0 && buyQueue.length > 0) {
+          const buy = buyQueue[0];
+          const m = Math.min(sellQty, buy.qty);
+          pnl += m * (price - buy.price);
+          sellQty -= m;
+          buy.qty -= m;
+          matched = true;
+          // Consider consumed if remaining value < $0.01
+          if (buy.qty * buy.price < 0.01) {
+            pendingBuyIds.delete(buy.id);
+            buyQueue.shift();
+          }
+        }
+        if (matched) {
+          totalPnl += pnl;
+          roundTrips++;
+          if (pnl > 0) winCount++;
+        }
+      }
+    }
+
+    const winRate = roundTrips > 0 ? Math.round((winCount / roundTrips) * 100) : 0;
+    const pnlColor = totalPnl >= 0 ? '#34C759' : '#F54A45';
+    const pnlSign = totalPnl >= 0 ? '+' : '';
 
     return (
       <>
@@ -200,29 +256,30 @@ export default function TaskDetailScreen({ navigation, route }) {
         {executed.length > 0 && (
           <View style={styles.tradesSummary}>
             <View style={styles.tradesStat}>
-              <Text style={styles.tradesStatValDark}>${totalSpent.toFixed(2)}</Text>
-              <Text style={styles.tradesStatLabel}>总交易额</Text>
+              <Text style={[styles.tradesStatVal, { color: pnlColor }]}>{pnlSign}${totalPnl.toFixed(2)}</Text>
+              <Text style={styles.tradesStatLabel}>总盈亏</Text>
             </View>
             <View style={styles.tradesStat}>
-              <Text style={[styles.tradesStatVal, { color: '#34C759' }]}>{buyCount}</Text>
-              <Text style={styles.tradesStatLabel}>买入</Text>
+              <Text style={styles.tradesStatValDark}>{winRate}%</Text>
+              <Text style={styles.tradesStatLabel}>胜率</Text>
             </View>
             <View style={styles.tradesStat}>
-              <Text style={[styles.tradesStatVal, { color: '#F54A45' }]}>{sellCount}</Text>
-              <Text style={styles.tradesStatLabel}>卖出</Text>
+              <Text style={styles.tradesStatValDark}>{roundTrips}</Text>
+              <Text style={styles.tradesStatLabel}>完成交易</Text>
             </View>
           </View>
         )}
 
-        {/* Trade rows */}
+        {/* Trade rows — chronological order, same as history */}
         {executed.map((sig) => {
           const badge = getBadge(sig.action);
           const amount = sig.quoteAmount || 0;
           const price = sig.entryPrice || 0;
+          const isPending = pendingBuyIds.has(sig.id);
           return (
             <TouchableOpacity
               key={sig.id + '-t'}
-              style={styles.tradeRow}
+              style={[styles.tradeRow, isPending && { borderColor: '#FFD60A', borderWidth: 1.5 }]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('TradeDetail', { trade: sig })}
             >

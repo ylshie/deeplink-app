@@ -78,11 +78,14 @@ export async function registerForPushNotifications() {
 }
 
 /**
- * Schedule a local notification (for testing).
+ * Schedule a local notification with optional navigation data.
+ * @param {string} title
+ * @param {string} body
+ * @param {object} [data] - e.g. { screen: 'TaskDetail', params: { id: 'task-1' } }
  */
-export async function sendLocalNotification(title, body) {
+export async function sendLocalNotification(title, body, data = {}) {
   await Notifications.scheduleNotificationAsync({
-    content: { title, body, sound: true },
+    content: { title, body, sound: true, data },
     trigger: null, // immediate
   });
 }

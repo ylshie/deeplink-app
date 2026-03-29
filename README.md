@@ -49,7 +49,8 @@ LoginScreen（邮箱验证码登录）
   ├── 卡片操作行: 运行|编辑|删除
   └── Tap → TaskDetailScreen
        ├── 历史 tab → Tap → DebateDetailScreen（Agent 完整意见 + 投票）
-       ├── 交易 tab → Tap → TradeDetailScreen（订单 + Agent 投票）
+       ├── 交易 tab → 总盈亏/胜率/完成交易数 + FIFO 配对 + 持仓标记
+       │            → Tap → TradeDetailScreen（订单 + Agent 投票）
        └── 配置 tab（暂停可编辑）
 
 我的 tab
@@ -79,6 +80,8 @@ LoginScreen（邮箱验证码登录）
 - Android 通知频道配置（震动 + 声音）
 - 5 项通知开关（交易执行/分析信号/风控预警/价格提醒/每日报告）
 - 设置同步到 server
+- 点击通知自动打开 App 并跳转对应页面（交易信号 → TaskDetail，警报/日报 → Notifications）
+- 支持 App 在前台、后台、被杀掉三种状态下的通知响应
 
 ### 真实 Binance 交易
 
@@ -100,6 +103,14 @@ Server 端运行，不需停留在画面：
   → 信号持久化到 data/signals.json（重启不丢失）
   → 最多保留 500 条历史
 ```
+
+交易统计：
+| 指标 | 计算方式 |
+|------|----------|
+| 总盈亏 | FIFO 配对（按时间正序匹配 BUY→SELL），剩余价值 < $0.01 视为已清 |
+| 胜率 | 盈利的完成交易 / 总完成交易 |
+| 完成交易 | 已配对的 BUY→SELL 轮次数 |
+| 持仓标记 | 未配对的 BUY 显示橙色边框，已卖出的正常显示 |
 
 防护规则：
 | 情况 | 行为 |
@@ -240,7 +251,8 @@ deeplink-app/
 │   │   ├── zh-TW.js                    #   繁體中文
 │   │   └── en.js                       #   English
 │   ├── services/
-│   │   └── notifications.js            #   Push notification 注册 + 本地通知
+│   │   ├── notifications.js            #   Push notification 注册 + 本地通知 + 点击导航
+│   │   └── backgroundPoller.js         #   全局 30s 轮询（信号 + server 通知）
 │   ├── utils/
 │   │   └── formatTime.js              #   本地时区时间格式化
 │   ├── components/

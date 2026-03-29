@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -73,9 +74,24 @@ export default function TasksScreen({ navigation }) {
         });
         setAutoStatus(prev => ({ ...prev, [taskId]: 'stopped' }));
       } else {
+        // Find task to get accountId and teamId
+        const task = tasks.find(t => t.id === taskId);
+        let email = null;
+        try {
+          const sess = await AsyncStorage.getItem('@deeplink_session');
+          if (sess) email = JSON.parse(sess).email;
+        } catch { /* */ }
+
         await fetch(`${API_BASE_URL}/trading/auto/start`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ taskId, teamId: taskTeamMap[taskId] || 'team-btc', autoExecute: true, quoteAmount: 10 }),
+          body: JSON.stringify({
+            taskId,
+            teamId: task?.teamId || taskTeamMap[taskId] || 'team-btc',
+            autoExecute: true,
+            quoteAmount: 10,
+            accountId: task?.accountId || null,
+            email,
+          }),
         });
         setAutoStatus(prev => ({ ...prev, [taskId]: 'running' }));
       }
@@ -164,7 +180,7 @@ export default function TasksScreen({ navigation }) {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   style={styles.cardBody}
-                  onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}
+                  onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name, accountId: task.accountId, teamId: task.teamId })}
                 >
                   <View style={styles.cardHeader}>
                     <View style={styles.cardLeft}>
@@ -190,7 +206,7 @@ export default function TasksScreen({ navigation }) {
                       <Text style={[styles.cardActionLabel, { color: colors.primary }]}>运行</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity style={styles.cardActionItem} onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name })}>
+                  <TouchableOpacity style={styles.cardActionItem} onPress={() => navigation.navigate('TaskDetail', { id: task.id, name: task.name, accountId: task.accountId, teamId: task.teamId })}>
                     <Pencil size={14} color={colors.textSecondary} />
                     <Text style={[styles.cardActionLabel, { color: colors.textSecondary }]}>编辑</Text>
                   </TouchableOpacity>
