@@ -75,6 +75,26 @@ async function poll() {
       }
     }
   } catch { /* network error, skip */ }
+
+  // Also check server-side notifications (price alerts, risk, daily report)
+  try {
+    const sess = await AsyncStorage.getItem('@deeplink_session');
+    if (sess) {
+      const { token } = JSON.parse(sess);
+      const res = await fetch(`${API_BASE_URL}/user/notifications?since=${lastSeenTimestamp}`, {
+        headers: { 'x-session-token': token },
+      });
+      if (res.ok) {
+        const serverNotifs = await res.json();
+        for (const n of serverNotifs) {
+          if (n.timestamp <= lastSeenTimestamp) continue;
+          sendLocalNotification(n.title, n.body);
+          lastSeenTimestamp = Math.max(lastSeenTimestamp, n.timestamp);
+          await AsyncStorage.setItem(LAST_SEEN_KEY, String(lastSeenTimestamp));
+        }
+      }
+    }
+  } catch { /* */ }
 }
 
 /**
