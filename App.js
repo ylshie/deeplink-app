@@ -9,6 +9,7 @@ import { ThemeProvider, useTheme } from './src/theme';
 import { I18nProvider } from './src/i18n';
 import { API_BASE_URL } from './src/api/config';
 import { registerForPushNotifications } from './src/services/notifications';
+import { startBackgroundPoller, stopBackgroundPoller } from './src/services/backgroundPoller';
 
 const SESSION_KEY = '@deeplink_session';
 
@@ -33,7 +34,7 @@ function AppInner() {
           const data = await res.json();
           if (data.valid) {
             setSession(parsed);
-            // Server restores binance token from user data automatically on auth/check
+            startBackgroundPoller();
           } else {
             await AsyncStorage.removeItem(SESSION_KEY);
           }
@@ -47,8 +48,8 @@ function AppInner() {
     const sess = { token, email };
     await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(sess));
     setSession(sess);
-    // Register push notifications after login
     registerForPushNotifications().catch(() => {});
+    startBackgroundPoller();
   };
 
   const handleLogout = async () => {
@@ -62,6 +63,7 @@ function AppInner() {
       } catch { /* */ }
     }
     await AsyncStorage.removeItem(SESSION_KEY);
+    stopBackgroundPoller();
     setSession(null);
   };
 
