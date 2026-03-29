@@ -92,7 +92,9 @@ LoginScreen（邮箱验证码登录）
 | 真实 Binance | 连接 API Key（AES-256-GCM 加密），真实余额 + 真实市价单 |
 | 模拟账户 | 用户设定初始 USDT 金额，使用真实市场价格虚拟交易 |
 
+- **新用户自动初始化**：首次登录自动建立模拟账户（$10,000 USDT）+ 预设 BTC 任务
 - 账户管理页面：列表显示所有账户（类型标签 + 名称 + 余额）+ 新增/删除
+- 所有任务均可删除（包括预设任务）
 - 旧版 Binance credential 自动迁移为 account 记录
 - 模拟交易使用 `data/market/prices.json` 的实时价格，虚拟余额存储在 `users.json`
 - 查看 Binance 真实成交记录：`GET /api/trading/orders/:symbol`
@@ -108,6 +110,7 @@ Server 端运行，不需停留在画面：
   → confidence ≥ 70% + action=BUY/SELL → 执行真实交易
   → 信号持久化到 data/signals.json（重启不丢失）
   → 最多保留 500 条历史
+  → Server 重启自动恢复 running 状态的任务（graceful shutdown 保留 status）
 ```
 
 交易统计：
@@ -138,19 +141,72 @@ Server 端运行，不需停留在画面：
 | Per Day | 每日调用量和费用趋势 |
 | Recent Calls | 最近 100 次调用：时间、类型标签、Agent、tokens、费用 |
 
-支持按天数（1/7/30/90）和用户 email 筛选。
+- 支持按天数（1/7/30/90）和用户 email 筛选
+- **点击展开详情**：查看每次调用的 input messages、AI output、tool call 详情
+- Tool Call 详情包括：工具名称、参数、成功/失败状态、耗时、返回大小、结果预览
 
-### 数据持久化
+### 数据存储
 
-| 数据 | 存储位置 | 说明 |
-|------|----------|------|
-| 用户任务/设置/账户/密钥 | Server `data/users.json` | 跨设备同步 |
-| 自动交易信号 | Server `data/signals.json` | 重启不丢失，最多 500 条 |
-| AI 用量日志 | Server `data/ai-usage.json` | 最多 5000 条 |
-| 市场数据 | Server `data/market/*.json` | 6 个 fetcher 定时更新 |
-| Session token | App AsyncStorage | 30 天有效 |
-| Binance 加密 token | App + Server | 双重存储 |
-| 主题/语言 | App + Server | 本地即时 + server 同步 |
+目前全部使用文件存储，未使用数据库。如需迁移至 PostgreSQL/MongoDB，替换 `userdata.js` 和 `usage.js` 的读写逻辑即可。
+
+#### Server 端文件
+
+| 文件 | 内容 | 说明 |
+|------|------|------|
+| `data/users.json` | 用户任务、设置、账户（真实+模拟）、API 密钥、价格警报、模拟余额 | 跨设备同步 |
+| `data/signals.json` | 自动交易信号历史、任务 config、运行状态 | 重启恢复，最多 500 条/任务 |
+| `data/ai-usage.json` | AI 调用记录（tokens、费用、input/output、tool calls） | 最多 5000 条 |
+| `data/notifications.json` | 价格警报、风控、日报通知 | 最多 200 条 |
+| `data/market/*.json` | 价格/技术指标/链上/情绪/宏观/套利 | 6 个 fetcher 定时更新 |
+
+数据安全：
+- **Atomic write**：写入先到 `.tmp` 再 `rename`，防止写入中断导致文件损坏
+- **自动备份**：每次写入前备份到 `.bak`，加载失败时自动从 backup 恢复
+- **空数据保护**：拒绝用空数据覆盖有内容的文件
+- **`.gitignore`**：所有 `data/*.json` 不受 git 操作影响
+
+#### Server 端内存（重启丢失）
+
+| 数据 | 说明 |
+|------|------|
+| 对话历史 | Agent/Team 聊天记录（`services/conversations.js`） |
+| Session tokens | 登录 session（`services/auth.js`，30 天有效） |
+| 自定义 Agent/Team | 用户创建的 Agent 和分析群（重启后需重建） |
+
+#### App 端 AsyncStorage
+
+| Key | 内容 |
+|-----|------|
+| `@deeplink_session` | 登录 token + email |
+| `@deeplink_binance_credentials` | 旧版 Binance 加密 token（兼容用） |
+| `@deeplink_last_signal_ts` | 通知已读时间戳 |
+
+### AI Tool Calling（类 MCP 架构）
+
+AI Agent 通过 OpenAI Function Calling 读取预抓取的市场数据，不直接调外部 API：
+
+```
+OpenAI GPT-4o-mini ←→ AI Service (tool call loop, max 5 rounds)
+                           ↓ execute(toolName, args)
+                     Tool Executor → 读取 data/market/*.json
+                                          ↑ 定时更新
+                                   Background Fetchers → Binance / CoinGecko / ...
+```
+
+6 个工具：
+
+| 工具 | 功能 | 数据源 | 更新频率 |
+|------|------|--------|----------|
+| `get_price` | 价格、24h 涨跌、成交量 | `prices.json` | 5 分钟 |
+| `get_technicals` | RSI、MACD、布林带、EMA | `technicals.json` | 15 分钟 |
+| `get_onchain` | 活跃地址、鲸鱼交易、TVL | `onchain.json` | 1 小时 |
+| `get_sentiment` | 恐惧贪婪指数、多空比 | `sentiment.json` | 30 分钟 |
+| `get_macro` | 联储利率、CPI、ETF 资金流 | `macro.json` | 1 小时 |
+| `get_arbitrage` | 跨所价差、资金费率套利 | `arbitrage.json` | 5 分钟 |
+
+每个 Agent 只能使用角色相关的工具子集（如技术面 Agent 只有 `get_price` + `get_technicals`）。
+
+多 Agent 辩论时，5 个 Agent **并行**各自独立调用工具分析，完成后由主持人综合给出决策。
 
 ### 性能优化
 
@@ -177,9 +233,9 @@ Server 端运行，不需停留在画面：
 
 | Method | Path | 说明 |
 |--------|------|------|
-| `GET` | `/api/user/tasks` | 用户任务列表（builtin + 自定义） |
+| `GET` | `/api/user/tasks` | 用户任务列表 |
 | `POST` | `/api/user/tasks` | 创建任务 |
-| `DELETE` | `/api/user/tasks/:id` | 删除自定义任务 |
+| `DELETE` | `/api/user/tasks/:id` | 删除任务 |
 | `GET` | `/api/user/settings` | 用户设置（主题/语言/通知） |
 | `PUT` | `/api/user/settings` | 更新设置 |
 | `GET` | `/api/user/accounts` | 列出所有账户（真实 + 模拟） |
@@ -199,7 +255,8 @@ Server 端运行，不需停留在画面：
 
 | Method | Path | 说明 |
 |--------|------|------|
-| `GET` | `/api/agents` | 列出所有 Agent（含 builtin 标记） |
+| `GET` | `/api/agents` | 列出所有 Agent（内置 + 自定义） |
+| `POST` | `/api/agents` | 创建自定义 Agent |
 | `POST` | `/api/agents/:id/chat` | 发送消息（含 tool calling + 用量记录） |
 | `DELETE` | `/api/agents/:id` | 删除自定义 Agent |
 
@@ -207,7 +264,8 @@ Server 端运行，不需停留在画面：
 
 | Method | Path | 说明 |
 |--------|------|------|
-| `GET` | `/api/teams` | 列出所有分析群 |
+| `GET` | `/api/teams` | 列出所有分析群（内置 + 自定义） |
+| `POST` | `/api/teams` | 创建自定义分析群 |
 | `POST` | `/api/teams/:id/chat` | 多 Agent 辩论（含 tool calling + 用量记录） |
 | `DELETE` | `/api/teams/:id` | 删除自定义分析群 |
 
@@ -229,9 +287,10 @@ Server 端运行，不需停留在画面：
 
 | Method | Path | 说明 |
 |--------|------|------|
-| `GET` | `/admin` | AI 用量 Web Dashboard |
+| `GET` | `/admin` | AI 用量 Web Dashboard（点击展开 tool call 详情） |
 | `GET` | `/admin/api/summary` | 用量摘要（支持 ?days=N&email=X） |
 | `GET` | `/admin/api/recent` | 最近 N 次 AI 调用 |
+| `GET` | `/admin/api/call/:id` | 单次调用详情（input/output/tool calls） |
 | `GET` | `/admin/api/context` | 按 team/task/email 筛选 |
 
 ### System
