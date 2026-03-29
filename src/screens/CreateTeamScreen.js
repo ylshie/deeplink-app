@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Check, Plus, ChevronDown } from 'lucide-react-native';
 import { useTheme } from '../theme';
+import { API_BASE_URL } from '../api/config';
 import { getAgents } from '../api';
 
 const PAIRS = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'DOGE/USDT'];
@@ -55,8 +56,25 @@ export default function CreateTeamScreen({ navigation }) {
       showAlert('提示', '请至少选择 2 个 Agent');
       return;
     }
-    // For now just go back — server create team API can be added later
-    navigation.goBack();
+    try {
+      const res = await fetch(`${API_BASE_URL}/teams`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          pair: selectedPair,
+          agentIds: selectedAgentIds,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Server ${res.status}`);
+      }
+      navigation.goBack();
+    } catch (e) {
+      showAlert('错误', e.message);
+    }
   };
 
   return (

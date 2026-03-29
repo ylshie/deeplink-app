@@ -46,9 +46,20 @@ export default function CreateAgentScreen({ navigation }) {
       return;
     }
     try {
-      const sess = await AsyncStorage.getItem('@deeplink_session');
-      const sessToken = sess ? JSON.parse(sess).token : null;
-      // For now just go back — server create agent API can be added later
+      const res = await fetch(`${API_BASE_URL}/agents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          systemPrompt: prompt.trim() || undefined,
+          plugins: selectedPlugins,
+          model: selectedModel,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Server ${res.status}`);
+      }
       navigation.goBack();
     } catch (e) {
       showAlert('错误', e.message);
