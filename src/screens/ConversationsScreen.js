@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Search, Plus, Bell, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../theme';
@@ -53,19 +54,22 @@ export default function ConversationsScreen({ navigation }) {
     if (item.builtin) return;
     const isTeam = activeFilter === 'Teams';
     const label = isTeam ? '分析群' : 'Agent';
-    Alert.alert(`删除${label}`, `确认删除「${item.name}」？`, [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除', style: 'destructive',
-        onPress: async () => {
-          try {
-            if (isTeam) await deleteTeam(item.id);
-            else await deleteAgent(item.id);
-            fetchData(activeFilter);
-          } catch { /* ignore */ }
-        },
-      },
-    ]);
+    const doDelete = async () => {
+      try {
+        if (isTeam) await deleteTeam(item.id);
+        else await deleteAgent(item.id);
+        fetchData(activeFilter);
+      } catch { /* ignore */ }
+    };
+    if (Platform.OS === 'web') {
+      if (!window.confirm(`确认删除「${item.name}」？`)) return;
+      doDelete();
+    } else {
+      Alert.alert(`删除${label}`, `确认删除「${item.name}」？`, [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   const renderItem = ({ item }) => {
