@@ -37,6 +37,14 @@ export default function ConversationsScreen({ navigation }) {
     fetchData(activeFilter);
   }, [activeFilter, fetchData]);
 
+  // Refresh when screen comes back into focus (e.g. after creating agent/team)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchData(activeFilter);
+    });
+    return unsubscribe;
+  }, [navigation, activeFilter, fetchData]);
+
   const handleFilterPress = (f) => {
     if (f !== activeFilter) setActiveFilter(f);
   };
