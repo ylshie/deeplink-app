@@ -23,7 +23,7 @@ import { useTheme } from '../theme';
 import { getTasks, deleteTask } from '../api';
 import { API_BASE_URL } from '../api/config';
 
-const filters = ['全部', '运行中', '已暂停', '草稿'];
+const filters = ['全部', '运行中', '已暂停'];
 
 export default function TasksScreen({ navigation }) {
   const { colors } = useTheme();
@@ -39,10 +39,18 @@ export default function TasksScreen({ navigation }) {
         getTasks(filter),
         fetch(`${API_BASE_URL}/trading/auto/status`).then(r => r.ok ? r.json() : []).catch(() => []),
       ]);
-      setTasks(data);
       const statusMap = {};
       statusRes.forEach(s => { statusMap[s.id] = s.status; });
       setAutoStatus(statusMap);
+
+      // Filter tasks by auto-trader status
+      let filtered = data;
+      if (filter === '运行中') {
+        filtered = data.filter(t => statusMap[t.id] === 'running');
+      } else if (filter === '已暂停') {
+        filtered = data.filter(t => statusMap[t.id] !== 'running');
+      }
+      setTasks(filtered);
     } catch (e) {
       console.error('Failed to fetch tasks:', e);
     } finally {
@@ -183,12 +191,14 @@ export default function TasksScreen({ navigation }) {
                 >
                   <View style={styles.cardHeader}>
                     <View style={styles.cardLeft}>
-                      <View style={[styles.statusDot, { backgroundColor: isRunning ? '#34C759' : task.statusColor }]} />
+                      <View style={[styles.statusDot, { backgroundColor: isRunning ? '#34C759' : '#FF9500' }]} />
                       <Text style={[styles.cardName, { color: colors.textPrimary }]} numberOfLines={1}>{task.name}</Text>
                     </View>
                   </View>
                   <View style={styles.cardInfo}>
-                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>{task.group} · {task.schedule}</Text>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                      {task.group} · {task.schedule} · {isRunning ? '运行中' : '已暂停'}
+                    </Text>
                   </View>
                 </TouchableOpacity>
 

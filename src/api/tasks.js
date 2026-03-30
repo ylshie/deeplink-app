@@ -40,10 +40,6 @@ export async function getTasks(statusFilter) {
     }
   }
 
-  if (statusFilter && statusFilter !== '全部') {
-    const map = { '运行中': 'active', '已暂停': 'paused', '草稿': 'draft' };
-    return list.filter((t) => t.status === map[statusFilter]);
-  }
   return list;
 }
 
